@@ -6,6 +6,7 @@ import HomeScreen from './screens/home';
 import HistoryScreen from './screens/history';
 import ProfileScreen from './screens/profile';
 
+
 const Tab = createBottomTabNavigator();
 
 export default function App() {
