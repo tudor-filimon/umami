@@ -38,4 +38,5 @@ backend/credentials/
 **/*credentials*.json
 massive-anagram-448023-j1-cf85396d721c.json
 
-# Backend
+node_modules/
+ 
