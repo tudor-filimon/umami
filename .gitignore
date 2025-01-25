@@ -1,1 +1,4 @@
 # Specifies which files Git should ignore
+.venv
+venv
+node_modules
