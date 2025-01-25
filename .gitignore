@@ -4,6 +4,7 @@
 venv/
 env/
 .env/
+supaTopSecret.json
 
 # Python compiled files
 __pycache__/

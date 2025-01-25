@@ -33,12 +33,15 @@ export const recipeService = {
 
   getRecipes: async (userId: string) => {
     try {
-      const response = await fetch(`${BASE_URL}/api/recipes/${userId}`);
+      const response = await fetch(`${BASE_URL}/api/recipes/user/${userId}`);
       return await response.json();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching recipes:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      return { success: false, error: errorMessage };
+      if (error instanceof Error) {
+        return { success: false, error: error.message };
+      } else {
+        return { success: false, error: 'An unknown error occurred.' };
+      }
     }
   },
 };
