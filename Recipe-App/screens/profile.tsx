@@ -1,7 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import authService from '../services/authService';
+import { useNavigation } from '@react-navigation/native';
 
 const ProfileScreen = () => {
+  const navigation = useNavigation();
+
   const profileDetails = [
     { title: 'Edit Profile', key: '1' },
     { title: 'Languages', key: '2' },
@@ -9,6 +13,32 @@ const ProfileScreen = () => {
     { title: 'Settings', key: '4' },
     { title: 'Log Out', key: '5' },
   ];
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Confirm Logout",
+      "Are you sure you want to logout?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Logout",
+          onPress: async () => {
+            try {
+              await authService.logout();
+              Alert.alert('Logged Out', 'You have been logged out successfully.', [
+                { text: 'OK', onPress: () => navigation.navigate('Login') }
+              ]);
+            } catch (error) {
+              Alert.alert('Logout Error', 'An error occurred while logging out.');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -23,7 +53,10 @@ const ProfileScreen = () => {
       <FlatList
         data={profileDetails}
         renderItem={({ item }) => (
-          <TouchableOpacity style={styles.optionContainer}>
+          <TouchableOpacity
+            style={styles.optionContainer}
+            onPress={item.title === 'Log Out' ? handleLogout : undefined} // Call handleLogout on Log Out
+          >
             <Text style={styles.optionText}>{item.title}</Text>
           </TouchableOpacity>
         )}
