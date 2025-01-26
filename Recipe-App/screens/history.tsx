@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Alert, Button } from 'react-native';
+import { View, Text, FlatList, Alert, Button, StyleSheet } from 'react-native';
 import { recipeService } from '../src/recipeService';
+import { auth } from '../firebaseConfig'; // Import your Firebase Auth configuration
 
 export default function HistoryScreen() {
   const [recipes, setRecipes] = useState<Array<{
@@ -9,12 +10,21 @@ export default function HistoryScreen() {
     ingredients: string[];
     instructions: string;
   }>>([]);
-  
-  const userId = 'LZyJfIrH0vWD9qeQHdIJ7R7nRfi2';
+  const [loading, setLoading] = useState(false);
 
+  // Grabs the user from Firebase Auth
+  const currentUser = auth.currentUser;
+
+  // Function to fetch recipes by user ID
   const fetchRecipes = async () => {
     try {
-      const response = await recipeService.getRecipes(userId);
+      if (!currentUser) {
+        Alert.alert('Not logged in', 'No user is currently logged in');
+        return;
+      }
+      setLoading(true);
+      const response = await recipeService.getRecipes(currentUser.uid);
+
       if (response.success) {
         setRecipes(response.recipes);
       } else {
@@ -22,28 +32,56 @@ export default function HistoryScreen() {
       }
     } catch (error) {
       Alert.alert('Error', 'An error occurred while fetching recipes.');
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchRecipes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 10 }}>Recipe History</Text>
-      <FlatList
-        data={recipes}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={{ marginVertical: 10 }}>
-            <Text style={{ fontWeight: 'bold' }}>{item.title}</Text>
-            <Text>Ingredients: {item.ingredients.join(', ')}</Text>
-            <Text>Instructions: {item.instructions}</Text>
-          </View>
-        )}
-      />
+    <View style={styles.container}>
+      <Text style={styles.title}>Recipe History</Text>
+
+      {loading ? (
+        <Text>Loading...</Text>
+      ) : (
+        <FlatList
+          data={recipes}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <View style={styles.itemContainer}>
+              <Text style={styles.itemTitle}>{item.title}</Text>
+              <Text>Ingredients: {item.ingredients.join(', ')}</Text>
+              <Text>Instructions: {item.instructions}</Text>
+            </View>
+          )}
+        />
+      )}
+
       <Button title="Refresh" onPress={fetchRecipes} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  itemContainer: {
+    marginVertical: 10,
+  },
+  itemTitle: {
+    fontWeight: 'bold',
+  },
+});
