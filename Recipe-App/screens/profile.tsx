@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
 import authService from '../services/authService';
 import { useNavigation } from '@react-navigation/native';
+import { auth, firestore } from '../firebaseConfig'; // Ensure firebaseConfig is set up
+import { doc, getDoc } from 'firebase/firestore';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
+  const [userInfo, setUserInfo] = useState<{ name: string; age: string } | null>(null);
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const userDoc = await getDoc(doc(firestore, 'users', currentUser.uid));
+        if (userDoc.exists()) {
+          setUserInfo(userDoc.data() as { name: string; age: string });
+        } else {
+          Alert.alert('Error', 'User data not found.');
+        }
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   const profileDetails = [
     { title: 'Edit Profile', key: '1' },
@@ -44,9 +63,8 @@ const ProfileScreen = () => {
     <View style={styles.container}>
       <View style={styles.profileInfoContainer}>
         <View style={styles.profileDetails}>
-          <Text style={styles.detailText}>Name: Brianna</Text>
-          <Text style={styles.detailText}>Age: 18</Text>
-          <Text style={styles.detailText}>Favourite colour: Purple</Text>
+          <Text style={styles.detailText}>Name: {userInfo?.name || 'Loading...'}</Text>
+          <Text style={styles.detailText}>Age: {userInfo?.age || 'Loading...'}</Text>
         </View>
       </View>
 

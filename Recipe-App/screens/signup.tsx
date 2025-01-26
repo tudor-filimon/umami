@@ -1,41 +1,58 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import { auth } from '../firebaseConfig';
+import { auth, firestore } from '../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-
-type RootStackParamList = {
-  SignUp: undefined;
-  // Add other screens here if needed
-};
-
-type SignUpScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SignUp'>;
+import { doc, setDoc } from 'firebase/firestore';
 
 const SignUpScreen = () => {
-  const navigation = useNavigation<SignUpScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const navigation = useNavigation();
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      Alert.alert('Sign Up Successful', 'You can now log in with your new account');
-      navigation.goBack();
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userId = userCredential.user.uid;
+
+      // Save additional user info to Firestore
+      await setDoc(doc(firestore, 'users', userId), {
+        name,
+        age,
+      });
+
+      Alert.alert('Sign Up Successful', 'Welcome!', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') }
+      ]);
     } catch (error) {
-      const errorMessage = (error as Error).message;
-      Alert.alert('Error', errorMessage);
+      Alert.alert('Sign Up Error', (error as Error).message);
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Sign Up</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Name"
+        value={name}
+        onChangeText={setName}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Age"
+        value={age}
+        onChangeText={setAge}
+        keyboardType="numeric"
+      />
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -59,6 +76,7 @@ const SignUpScreen = () => {
         secureTextEntry
       />
       <Button title="Sign Up" onPress={handleSignUp} />
+      <Button title="Back to Login" onPress={() => navigation.navigate('Login')} />
     </View>
   );
 };
