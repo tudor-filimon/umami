@@ -36,3 +36,5 @@ Thumbs.db
 backend/
 
 /credentials/ 
+
+TOP_SECRET_STUFF.py
