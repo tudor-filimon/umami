@@ -29,13 +29,9 @@ Thumbs.db
 .env
 .env.local
 
-# API Credentials
-credentials/
-*.json
-backend/credentials/
-**/credentials/
-**/*credentials*.json
-massive-anagram-448023-j1-cf85396d721c.json
+
 
 # Backend
 backend/
+
+TOP_SECRET_STUFF.py

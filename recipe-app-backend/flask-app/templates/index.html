@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe App</title>
+</head>
+<body>
+    <h1>Welcome to the Recipe App</h1>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <label for="image">Upload a picture of your fridge:</label>
+        <input type="file" id="image" name="image" accept="image/*" required>
+        <button type="submit">Analyze</button>
+    </form>
+</body>
+</html>
