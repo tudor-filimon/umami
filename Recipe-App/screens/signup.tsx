@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import { app, auth } from '../firebaseConfig'; // Import auth
+import { auth } from '../firebaseConfig';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 type RootStackParamList = {
   SignUp: undefined;
@@ -17,15 +18,13 @@ const SignUpScreen = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-
-
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
     }
     try {
-      await auth().createUserWithEmailAndPassword(email, password);
+      await createUserWithEmailAndPassword(auth, email, password);
       Alert.alert('Sign Up Successful', 'You can now log in with your new account');
       navigation.goBack();
     } catch (error) {
