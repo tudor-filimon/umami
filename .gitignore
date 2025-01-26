@@ -34,3 +34,5 @@ Thumbs.db
 
 # Backend
 backend/
+
+/credentials/ 
