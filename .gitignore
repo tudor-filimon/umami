@@ -2,9 +2,12 @@
 
 # Python virtual environment
 venv/
+.venv/
+git rm -r --cached .venv
 env/
 .env/
 supaTopSecret.json
+massive-anagram-448023-j1-5672a0696775.json
 
 # Python compiled files
 __pycache__/
@@ -33,8 +36,8 @@ Thumbs.db
 
 
 # Backend
-backend/
 
 /credentials/ 
 
-TOP_SECRET_STUFF.py
+TOP_SECRET_STUFF.pyvenv/
+node_modules/
