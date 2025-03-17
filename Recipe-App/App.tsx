@@ -14,7 +14,14 @@ const Stack = createStackNavigator();
 
 function MainTabs() {
   return (
-    <Tab.Navigator>
+    <Tab.Navigator
+      screenOptions={{
+        tabBarStyle: {
+          height: 75,
+          paddingBottom: 15,
+        },
+      }}
+    >
       <Tab.Screen 
         name="Home" 
         component={HomeScreen} 
@@ -28,12 +35,24 @@ function MainTabs() {
         }}
       />
       <Tab.Screen 
-        name="History" 
+        name="Generate" 
+        component={ProfileScreen} 
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Image
+              source={require('./assets/generate.png')}
+              style={{ width: size, height: size, tintColor: color }}
+            />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="Post" 
         component={HistoryScreen} 
         options={{
           tabBarIcon: ({ color, size }) => (
             <Image
-              source={require('./assets/history.png')}
+              source={require('./assets/post.png')}
               style={{ width: size, height: size, tintColor: color }}
             />
           ),
