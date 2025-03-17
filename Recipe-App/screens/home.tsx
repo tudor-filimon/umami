@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 
 const HomeScreen = () => {
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
+  const [inputText, setInputText] = useState('');
 
   const askGalleryPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -57,10 +58,15 @@ const HomeScreen = () => {
     }
   };
 
+  const handleInputSubmit = () => {
+    Alert.alert('Input Submitted', `You entered: ${inputText}`);
+    setInputText('');
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>AI Recipe Generator</Text>
-      <Text style={styles.subtitle}>take a picture to start cooking...</Text>
+      <Text style={styles.subtitle}>Take a picture to start cooking...</Text>
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={handleUpload}>
@@ -70,6 +76,16 @@ const HomeScreen = () => {
           <Text style={styles.buttonText}>Camera</Text>
         </TouchableOpacity>
       </View>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Enter something..."
+        value={inputText}
+        onChangeText={setInputText}
+      />
+      <TouchableOpacity style={styles.button} onPress={handleInputSubmit}>
+        <Text style={styles.buttonText}>Submit</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -103,24 +119,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 5,
     marginHorizontal: 10,
+    marginTop: 10,
   },
   buttonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: 'white',
   },
-  footerNav: {
-    position: 'absolute',
-    bottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingVertical: 10,
-    backgroundColor: 'white',
-  },
-  navIcon: {
-    color: 'black',
-    fontSize: 16,
+  input: {
+    width: '80%',
+    padding: 10,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 5,
+    marginTop: 20,
+    marginBottom: 10,
   },
 });
 

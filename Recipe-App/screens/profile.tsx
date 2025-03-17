@@ -6,7 +6,7 @@ import { auth, firestore } from '../firebaseConfig'; // Ensure firebaseConfig is
 import { doc, getDoc } from 'firebase/firestore';
 
 const ProfileScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const [userInfo, setUserInfo] = useState<{ name: string; age: string } | null>(null);
 
   useEffect(() => {
@@ -18,6 +18,7 @@ const ProfileScreen = () => {
           setUserInfo(userDoc.data() as { name: string; age: string });
         } else {
           Alert.alert('Error', 'User data not found.');
+          console.log( Error)
         }
       }
     };

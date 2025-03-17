@@ -1,5 +1,9 @@
 # Specifies which files Git should ignore
 
+# Test 
+test_stuff/
+.DS_Store
+
 # Python virtual environment
 venv/
 .venv/
@@ -8,6 +12,7 @@ env/
 .env/
 supaTopSecret.json
 massive-anagram-448023-j1-5672a0696775.json
+TOP_SECRET_STUFF.py
 
 # Python compiled files
 __pycache__/

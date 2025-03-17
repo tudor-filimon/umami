@@ -1,9 +1,10 @@
 from google.cloud import vision
 import logging
+from routes.TOP_SECRET_STUFF import credentials
 
 class VisionController:
     def __init__(self):
-        self.client = vision.ImageAnnotatorClient()
+        self.client = vision.ImageAnnotatorClient(credentials=credentials)
 
     def allowed_file(self, filename):
         ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -15,15 +16,12 @@ class VisionController:
                 content = image_file.read()
                 image = vision.Image(content=content)
 
-                # Perform object localization on the image file
                 object_response = self.client.object_localization(image=image)
                 objects = object_response.localized_object_annotations
 
-                # Perform label detection on the image file
                 label_response = self.client.label_detection(image=image)
                 labels = label_response.label_annotations
 
-                # Combine results from object localization and label detection
                 ingredients = self.get_ingredients(objects, labels)
                 return ingredients
             return []

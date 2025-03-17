@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from controllers.vision_controller import VisionController
+from routes.VisionController import VisionController
 
 vision_routes = Blueprint('vision_routes', __name__)
 vision_controller = VisionController()

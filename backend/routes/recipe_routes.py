@@ -25,7 +25,7 @@ def add_recipe():
             "user_id": data['user_id']
         }
         recipe_ref = recipes_collection.add(recipe)
-        recipe_id = recipe_ref[1].id
+        recipe_id = recipe_ref.id    
         recipe['id'] = recipe_id
         return jsonify({"message": "Recipe added successfully", "recipe": recipe}), 201
     
