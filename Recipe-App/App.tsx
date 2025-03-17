@@ -4,7 +4,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Image } from 'react-native';
 import HomeScreen from './screens/home';
-import HistoryScreen from './screens/history';
+import GenerateScreen from './screens/generate';
+import PostScreen from './screens/post';
 import ProfileScreen from './screens/profile';
 import LoginScreen from './screens/login';
 import SignUpScreen from './screens/signup';
@@ -36,7 +37,7 @@ function MainTabs() {
       />
       <Tab.Screen 
         name="Generate" 
-        component={ProfileScreen} 
+        component={GenerateScreen} 
         options={{
           tabBarIcon: ({ color, size }) => (
             <Image
@@ -48,7 +49,7 @@ function MainTabs() {
       />
       <Tab.Screen 
         name="Post" 
-        component={HistoryScreen} 
+        component={PostScreen} 
         options={{
           tabBarIcon: ({ color, size }) => (
             <Image
