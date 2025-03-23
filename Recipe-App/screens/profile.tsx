@@ -88,7 +88,7 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#FFEEB7',
   },
   profileInfoContainer: {
     alignItems: 'center',
