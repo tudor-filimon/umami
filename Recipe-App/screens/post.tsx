@@ -1,154 +1,245 @@
-// import React, { useEffect, useState } from 'react';
-// import { View, Text, FlatList, Alert, Button, StyleSheet } from 'react-native';
-// import { recipeService } from '../src/recipeService';
-// import { auth } from '../firebaseConfig'; // Import your Firebase Auth configuration
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, ScrollView, Dimensions, Alert, Platform, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as ImagePicker from 'expo-image-picker';
+import { Camera } from 'expo-camera';
+import * as MediaLibrary from 'expo-media-library';
+import { globalStyles } from '../styles/globalStyles';
 
-// export default function HistoryScreen() {
-//   const [recipes, setRecipes] = useState<Array<{
-//     id: string;
-//     title: string;
-//     ingredients: string[];
-//     instructions: string;
-//   }>>([]);
-//   const [loading, setLoading] = useState(false);
+type RootStackParamList = {
+  Post: undefined;
+  Caption: { imageUri: string };
+  // Add other screens as needed
+};
 
-//   // Grabs the user from Firebase Auth
-//   const currentUser = auth.currentUser;
+type PostScreenProps = {
+  navigation: NativeStackNavigationProp<RootStackParamList, 'Post'>;
+};
 
-//   // Function to fetch recipes by user ID
-//   const fetchRecipes = async () => {
-//     try {
-//       if (!currentUser) {
-//         Alert.alert('Not logged in', 'No user is currently logged in');
-//         return;
-//       }
-//       setLoading(true);
-//       const response = await recipeService.getRecipes(currentUser.uid);
+const { width } = Dimensions.get('window');
+const GRID_COLUMNS = 3;
+const GRID_ITEM_SIZE = width / GRID_COLUMNS;
 
-//       if (response.success) {
-//         setRecipes(response.recipes);
-//       } else {
-//         Alert.alert('Error', response.error || 'Failed to retrieve recipes.');
-//       }
-//     } catch (error) {
-//       Alert.alert('Error', 'An error occurred while fetching recipes.');
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
+export default function PostScreen({ navigation }: PostScreenProps) {
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [mediaItems, setMediaItems] = useState<Array<{ id: string; uri: string }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-//   useEffect(() => {
-//     fetchRecipes();
-//     // eslint-disable-next-line react-hooks/exhaustive-deps
-//   }, []);
+  useEffect(() => {
+    checkAndRequestPermissions();
+  }, []);
 
-//   return (
-//     <View style={styles.container}>
-//       <Text style={styles.title}>Recipe History</Text>
-
-//       {loading ? (
-//         <Text>Loading...</Text>
-//       ) : (
-//         <FlatList
-//           data={recipes}
-//           keyExtractor={(item) => item.id}
-//           renderItem={({ item }) => (
-//             <View style={styles.itemContainer}>
-//               <Text style={styles.itemTitle}>{item.title}</Text>
-//               <Text>Ingredients: {item.ingredients.join(', ')}</Text>
-//               <Text>Instructions: {item.instructions}</Text>
-//             </View>
-//           )}
-//         />
-//       )}
-
-//       <Button title="Refresh" onPress={fetchRecipes} />
-//     </View>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     padding: 20,
-//     backgroundColor: '#fff',
-//   },
-//   title: {
-//     fontSize: 20,
-//     fontWeight: 'bold',
-//     marginBottom: 10,
-//   },
-//   itemContainer: {
-//     marginVertical: 10,
-//   },
-//   itemTitle: {
-//     fontWeight: 'bold',
-//   },
-// });
-
-
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, Alert, Button, StyleSheet } from 'react-native';
-import { auth } from '../firebaseConfig'; // Import your Firebase Auth configuration
-
-export default function HistoryScreen() {
-  const [recipes, setRecipes] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const currentUser = auth.currentUser;
-
-  // Function to fetch recipes for the current user directly from the Flask API
-  const fetchRecipes = async () => {
-    if (!currentUser) {
-      Alert.alert('Not logged in', 'No user is currently logged in');
-      return;
-    }
-    setLoading(true);
+  const checkAndRequestPermissions = async () => {
     try {
-      const response = await fetch('http://172.22.29.182:5001/api/recipes/user/l3QTSLhcGMYazdZqphljBvk85mG2', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    });      const data = await response.json();
-      if (data.success) {
-        setRecipes(data.recipes);
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      setHasPermission(status === 'granted');
+      if (status === 'granted') {
+        await loadMediaItems();
       } else {
-        Alert.alert('Error', data.error || 'Failed to retrieve recipes.');
+        Alert.alert('Permission needed', 'Please grant media library permissions to view your photos.');
       }
     } catch (error) {
-      Alert.alert('Error', 'An error occurred while fetching recipes.');
-      console.log(error);
-    } finally {
-      setLoading(false);
+      console.error('Error checking permissions:', error);
+      Alert.alert('Error', 'Failed to check permissions. Please try again.');
     }
   };
 
-  useEffect(() => {
-    fetchRecipes();
+  const loadMediaItems = async () => {
+    try {
+      setLoading(true);
+      const albums = await MediaLibrary.getAlbumsAsync();
+      const cameraRoll = albums.find(album => album.title === 'Camera Roll');
+      
+      if (!cameraRoll) {
+        Alert.alert('Error', 'Could not find camera roll');
+        return;
+      }
+
+      const assets = await MediaLibrary.getAssetsAsync({
+        album: cameraRoll,
+        mediaType: ['photo'],
+        sortBy: ['creationTime'],
+        first: 100, // Increased to show more photos
+      });
+
+      const items = assets.assets.map(asset => ({
+        id: asset.id,
+        uri: asset.uri,
+      }));
+
+      setMediaItems(items);
+      if (items.length > 0 && !selectedImage) {
+        setSelectedImage(items[0].uri);
+      }
+    } catch (error) {
+      console.error('Error loading media:', error);
+      Alert.alert('Error', 'Failed to load photos. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    loadMediaItems();
   }, []);
 
+  const pickMultipleImages = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera roll permissions to select images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const newImages = result.assets.map((asset, index) => ({
+          id: `new-${index}`,
+          uri: asset.uri,
+        }));
+        setMediaItems(prev => [...newImages, ...prev]);
+        if (newImages.length > 0) {
+          setSelectedImage(newImages[0].uri);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick images. Please try again.');
+    }
+  };
+
+  const openCamera = async () => {
+    try {
+      const { status } = await Camera.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Please grant camera permissions to take photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        const newImage = {
+          id: `camera-${Date.now()}`,
+          uri: result.assets[0].uri,
+        };
+        setMediaItems(prev => [newImage, ...prev]);
+        setSelectedImage(newImage.uri);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to open camera. Please try again.');
+    }
+  };
+
+  if (hasPermission === null) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Requesting permissions...</Text>
+      </View>
+    );
+  }
+
+  if (hasPermission === false) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>No access to camera roll</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Recipe History</Text>
-      {loading ? (
-        <Text>Loading...</Text>
-      ) : (
-        <FlatList
-  data={recipes}
-  keyExtractor={(item: any) => item.id.toString()}
-  renderItem={({ item }: { item: any }) => (
-    <View style={styles.itemContainer}>
-      <Text style={styles.itemTitle}>{item.title}</Text>
-      <Text>
-        Ingredients:{' '}
-        {Array.isArray(item.ingredients) ? item.ingredients.join(', ') : ''}
-      </Text>
-      <Text>Instructions: {item.instructions || 'No instructions provided'}</Text>
-    </View>
-  )}
-/>
-      )}
-      <Button title="Refresh" onPress={fetchRecipes} />
+    <View style={[globalStyles.container, styles.container]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="close" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>New post</Text>
+        <TouchableOpacity 
+          onPress={() => {
+            if (selectedImage) {
+              navigation.navigate('Caption', { imageUri: selectedImage });
+            } else {
+              Alert.alert('No image selected', 'Please select an image to continue');
+            }
+          }}
+          disabled={!selectedImage}
+        >
+          <Text style={[styles.nextButton, !selectedImage && styles.nextButtonDisabled]}>
+            Next
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Image Preview Area */}
+      <View style={styles.previewContainer}>
+        {selectedImage ? (
+          <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+        ) : (
+          <View style={styles.previewPlaceholder}>
+            <Text style={styles.previewPlaceholderText}>No image selected</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Controls */}
+      <View style={styles.controls}>
+        <View style={styles.dropdownContainer}>
+          <Text style={styles.dropdownLabel}>Recents</Text>
+        </View>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.circularButton} onPress={pickMultipleImages}>
+            <Ionicons name="images" size={24} color="black" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.circularButton} onPress={openCamera}>
+            <Ionicons name="camera" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Media Grid */}
+      <ScrollView 
+        style={styles.gridContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text>Loading photos...</Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {mediaItems.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.gridItem}
+                onPress={() => setSelectedImage(item.uri)}
+              >
+                <Image 
+                  source={{ uri: item.uri }} 
+                  style={styles.gridImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
@@ -156,19 +247,94 @@ export default function HistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFEEB7',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  nextButton: {
+    color: '#007AFF',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  nextButtonDisabled: {
+    color: '#ccc',
+  },
+  previewContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: '#f0f0f0',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewPlaceholderText: {
+    color: '#999',
+    fontSize: 16,
+  },
+  controls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  dropdownContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dropdownLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  circularButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridContainer: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
-    backgroundColor: '#fff'
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
-  itemContainer: {
-    marginVertical: 10
+  gridItem: {
+    width: GRID_ITEM_SIZE,
+    height: GRID_ITEM_SIZE,
+    padding: 1,
   },
-  itemTitle: {
-    fontWeight: 'bold'
-  }
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
 });
-

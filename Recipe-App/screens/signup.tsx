@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { auth, firestore } from '../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+
+type RootStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
+};
+
+type SignUpScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SignUp'>;
 
 const SignUpScreen = () => {
   const [email, setEmail] = useState('');
@@ -11,7 +19,7 @@ const SignUpScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
-  const navigation = useNavigation();
+  const navigation = useNavigation<SignUpScreenNavigationProp>();
 
   const handleSignUp = async () => {
     if (password !== confirmPassword) {
@@ -86,7 +94,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: '#FFEEB7',
   },
   title: {
     fontSize: 24,
@@ -103,4 +111,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SignUpScreen;
+export default SignUpScreen; 

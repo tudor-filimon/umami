@@ -9,18 +9,33 @@ import PostScreen from './screens/post';
 import ProfileScreen from './screens/profile';
 import LoginScreen from './screens/login';
 import SignUpScreen from './screens/signup';
+import CaptionScreen from './screens/caption';
+import { colors } from './styles/globalStyles';
+
+type RootStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
+  Main: undefined;
+  Caption: { imageUri: string };
+};
 
 const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 
 function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          height: 75,
-          paddingBottom: 15,
+          backgroundColor: colors.navBar,
+          borderTopColor: colors.text + '20',
         },
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.text + '80',
+        headerStyle: {
+          backgroundColor: colors.navBar,
+        },
+        headerTintColor: colors.text,
       }}
     >
       <Tab.Screen 
@@ -78,10 +93,24 @@ function MainTabs() {
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator
+        screenOptions={{
+          cardStyle: { backgroundColor: colors.background },
+          headerStyle: { backgroundColor: colors.navBar },
+          headerTintColor: colors.text
+        }}
+        initialRouteName="Login"
+      >
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="Caption" 
+          component={CaptionScreen} 
+          options={{
+            headerShown: false
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

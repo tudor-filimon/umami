@@ -151,7 +151,7 @@ export default function CaptionScreen({ navigation, route }: CaptionScreenProps)
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'white',
+    backgroundColor: '#FFEEB7',
     paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   header: {
