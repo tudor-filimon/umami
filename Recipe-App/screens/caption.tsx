@@ -14,8 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { auth, firestore } from '../firebaseConfig';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { postService } from '../services/postService';
 
 type RootStackParamList = {
   Login: undefined;
@@ -45,27 +44,19 @@ export default function CaptionScreen({ navigation, route }: CaptionScreenProps)
 
     try {
       setIsPosting(true);
-      const currentUser = auth.currentUser;
-      
-      if (!currentUser) {
-        Alert.alert('Error', 'You must be logged in to share a post');
+
+      // Validate inputs
+      if (!caption.trim()) {
+        Alert.alert('Error', 'Please add a caption to your post');
         return;
       }
 
-      // Create the post document
-      const postData = {
-        userId: currentUser.uid,
-        imageUrl: imageUri,
-        caption: caption.trim(),
-        hashtags: hashtags.trim().split(' ').filter(tag => tag.startsWith('#')),
-        createdAt: serverTimestamp(),
-        likes: 0,
-        comments: [],
-      };
-
-      // Add the post to Firestore
-      const postsRef = collection(firestore, 'posts');
-      await addDoc(postsRef, postData);
+      // Create post using the service
+      await postService.createPost(
+        imageUri,
+        caption,
+        hashtags.trim().split(' ').filter(tag => tag.startsWith('#'))
+      );
 
       Alert.alert(
         'Success',
@@ -79,7 +70,19 @@ export default function CaptionScreen({ navigation, route }: CaptionScreenProps)
       );
     } catch (error) {
       console.error('Error sharing post:', error);
-      Alert.alert('Error', 'Failed to share your post. Please try again.');
+      let errorMessage = 'Failed to share your post. Please try again.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('logged in')) {
+          errorMessage = 'Please log in to share posts.';
+        } else if (error.message.includes('profile not found')) {
+          errorMessage = 'Your profile was not found. Please try logging in again.';
+        } else if (error.message.includes('permission-denied')) {
+          errorMessage = 'You do not have permission to share posts. Please check your account status.';
+        }
+      }
+      
+      Alert.alert('Error', errorMessage);
     } finally {
       setIsPosting(false);
     }

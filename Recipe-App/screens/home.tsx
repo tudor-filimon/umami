@@ -1,127 +1,211 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { Camera } from 'expo-camera';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, RefreshControl, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { collection, query, orderBy, onSnapshot, getDocs } from 'firebase/firestore';
+import { firestore } from '../firebaseConfig';
 
-const HomeScreen = () => {
-  const [hasCameraPermission, setHasCameraPermission] = useState(null);
-  const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
+type Post = {
+  id: string;
+  userName: string;
+  imageUrl: string;
+  caption: string;
+  hashtags: string[];
+  createdAt: any;
+  likes: number;
+};
 
-  const askGalleryPermission = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'We need access to your photo library to upload images.');
-      return false;
-    }
-    return true;
-  };
-
-  const askCameraPermission = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'We need access to your camera to take pictures.');
-      return false;
-    }
-    return true;
-  };
-
-  const handleUpload = async () => {
-    const permissionGranted = await askGalleryPermission();
-    if (permissionGranted) {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 1,
-      });
-
-      if (!result.canceled) {
-        Alert.alert('Image Selected', 'You have successfully chosen an image.');
-        console.log(result.assets[0].uri); // Handle the selected image URI
-      }
-    }
-  };
-
-  const handleCamera = async () => {
-    const permissionGranted = await askCameraPermission();
-    if (permissionGranted) {
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 1,
-      });
-
-      if (!result.canceled) {
-        Alert.alert('Image Captured', 'You have successfully taken a picture.');
-        console.log(result.assets[0].uri); // Handle the captured image URI
-      }
-    }
-  };
-
+const InstagramPost = ({ post }: { post: Post }) => {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>AI Recipe Generator</Text>
-      <Text style={styles.subtitle}>take a picture to start cooking...</Text>
-      
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleUpload}>
-          <Text style={styles.buttonText}>Upload</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleCamera}>
-          <Text style={styles.buttonText}>Camera</Text>
-        </TouchableOpacity>
+    <View style={styles.card}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.userInfo}>
+          <Image 
+            source={{ uri: "https://via.placeholder.com/32" }}
+            style={styles.profilePic}
+          />
+          <Text style={styles.username}>{post.userName}</Text>
+        </View>
+        <Ionicons name="ellipsis-horizontal" size={24} color="black" />
+      </View>
+
+      {/* Image */}
+      <Image 
+        source={{ uri: post.imageUrl }}
+        style={styles.postImage}
+      />
+
+      {/* Actions */}
+      <View style={styles.actions}>
+        <View style={styles.leftActions}>
+          <Ionicons name="heart-outline" size={24} color="black" />
+          <Ionicons name="chatbubble-outline" size={24} color="black" style={styles.actionIcon} />
+        </View>
+        <Ionicons name="bookmark-outline" size={24} color="black" />
+      </View>
+
+      {/* Likes */}
+      <Text style={styles.likes}>{post.likes} likes</Text>
+
+      {/* Caption */}
+      <View style={styles.caption}>
+        <Text style={styles.captionText}>
+          <Text style={styles.username}>{post.userName}</Text> {post.caption}
+          {post.hashtags.map((tag, index) => (
+            <Text key={index} style={styles.hashtag}> {tag}</Text>
+          ))}
+        </Text>
       </View>
     </View>
   );
 };
 
+const HomeScreen = () => {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchPosts = async () => {
+    try {
+      const postsRef = collection(firestore, 'posts');
+      const q = query(
+        postsRef,
+        orderBy('createdAt', 'desc')
+      );
+
+      const snapshot = await getDocs(q);
+      const postsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Post[];
+      setPosts(postsData);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Set up real-time listener for posts
+    const postsRef = collection(firestore, 'posts');
+    const q = query(
+      postsRef,
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const postsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Post[];
+      setPosts(postsData);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchPosts();
+    setRefreshing(false);
+  }, []);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#FFEEB7' }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingVertical: 12,
+          paddingBottom: 80, // Optional bottom space
+        }}
+        showsVerticalScrollIndicator={true}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {posts.map((post) => (
+          <InstagramPost key={post.id} post={post} />
+        ))}
+      </ScrollView>
+    </View>
+  );
+  
+};
+
 const styles = StyleSheet.create({
-  container: {
+  flatList: {
     flex: 1,
     backgroundColor: '#FFEEB7',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  title: {
-    color: 'black',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
+  listContainer: {
+    paddingVertical: 8,
   },
-  subtitle: {
-    color: 'black',
-    fontSize: 16,
-    marginBottom: 30,
+  card: {
+    width: '100%',
+    backgroundColor: '#FFEEB7',
+    borderRadius: 8,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    marginHorizontal: 12,
+    marginVertical: 6,
   },
-  buttonContainer: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '60%',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#FFEEB7',
   },
-  button: {
-    backgroundColor: 'black',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-    marginHorizontal: 10,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  footerNav: {
-    position: 'absolute',
-    bottom: 20,
+  userInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingVertical: 10,
-    backgroundColor: 'white',
+    alignItems: 'center',
   },
-  navIcon: {
-    color: 'black',
-    fontSize: 16,
+  profilePic: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  username: {
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  postImage: {
+    width: '100%',
+    height: 450,
+  },
+  actions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 12,
+    backgroundColor: '#FFEEB7',
+  },
+  leftActions: {
+    flexDirection: 'row',
+  },
+  actionIcon: {
+    marginLeft: 16,
+  },
+  likes: {
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    backgroundColor: '#FFEEB7',
+  },
+  caption: {
+    padding: 12,
+    paddingTop: 4,
+    backgroundColor: '#FFEEB7',
+  },
+  captionText: {
+    fontSize: 14,
+  },
+  hashtag: {
+    color: '#007AFF',
   },
 });
 
-export default HomeScreen; 
+export default HomeScreen;
