@@ -1,13 +1,13 @@
 import os
+import openai
 import requests
-from openai import OpenAI
 from flask import Blueprint, request, jsonify
 from dotenv import load_dotenv
 from routes.VisionController import VisionController
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("CHATGPT_API_KEY"))
+openai.api_key = os.getenv("CHATGPT_API_KEY")
 chatgpt_bp = Blueprint('chatgpt_routes', __name__)
 vision_controller = VisionController()
 
@@ -32,19 +32,19 @@ def get_recipes():
         if not api_key:
             return jsonify({"error": "ChatGPT API key not found"}), 500
 
-
         # Create the prompt for ChatGPT
         prompt = f'Generate 3 recipes using the following ingredients: {", ".join(ingredients)}. For each recipe, provide the name of the dish and quick steps to make it.'
 
         # Call the OpenAI API to generate recipes
-        response = client.chat.completions.create(model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=500,
-        stop=None)
-        recipes = response.choices[0].message.content.strip().split('\n\n')
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500
+        )
+        recipes = response.choices[0].message['content'].strip().split('\n\n')
         return jsonify(recipes)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

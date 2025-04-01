@@ -47,3 +47,4 @@ def get_user_recipes(user_id):
 
 def setRecipeRoutes(app):
     app.register_blueprint(recipe_routes)
+    

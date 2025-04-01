@@ -30,7 +30,6 @@ const HomeScreen = () => {
     const permissionGranted = await askGalleryPermission();
     if (permissionGranted) {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 1,
       });
@@ -46,7 +45,6 @@ const HomeScreen = () => {
     const permissionGranted = await askCameraPermission();
     if (permissionGranted) {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 1,
       });
