@@ -203,14 +203,47 @@ export default function PostScreen({ navigation }: PostScreenProps) {
   }
 
   return (
-    <View style={[globalStyles.container, styles.container]}>
+    <View style={[styles.container]}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New post</Text>
         <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        >
+          <Ionicons name="chevron-back-outline" size={28} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Make a post</Text>
+        <View style={styles.headerRight} />
+      </View>
+
+      {/* Image Preview Area */}
+      <View style={styles.previewContainer}>
+        {selectedImage ? (
+          <Image source={{ uri: selectedImage }} style={styles.previewImage} />
+        ) : (
+          <View style={styles.previewPlaceholder}>
+            <Text style={styles.previewPlaceholderText}>No image selected</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Media Selection Icons */}
+      <View style={styles.iconContainer}>
+        <TouchableOpacity style={styles.iconButton} onPress={openCamera}>
+          <Ionicons name="camera-outline" size={24} color="#000831" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={pickMultipleImages}
+        >
+          <Ionicons name="image-outline" size={24} color="#000831" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Continue Button */}
+      <View style={styles.bottomContainer}>
+        <TouchableOpacity
+          style={styles.continueButton}
           onPress={() => {
             if (selectedImage) {
               if (!userName) {
@@ -233,75 +266,9 @@ export default function PostScreen({ navigation }: PostScreenProps) {
           }}
           disabled={!selectedImage}
         >
-          <Text
-            style={[
-              styles.nextButton,
-              !selectedImage && styles.nextButtonDisabled,
-            ]}
-          >
-            Next
-          </Text>
+          <Text style={styles.continueButtonText}>Continue</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Image Preview Area */}
-      <View style={styles.previewContainer}>
-        {selectedImage ? (
-          <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-        ) : (
-          <View style={styles.previewPlaceholder}>
-            <Text style={styles.previewPlaceholderText}>No image selected</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Controls */}
-      <View style={styles.controls}>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.dropdownLabel}>Recents</Text>
-        </View>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.circularButton}
-            onPress={pickMultipleImages}
-          >
-            <Ionicons name="images" size={24} color="black" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.circularButton} onPress={openCamera}>
-            <Ionicons name="camera" size={24} color="black" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Media Grid */}
-      <ScrollView
-        style={styles.gridContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text>Loading photos...</Text>
-          </View>
-        ) : (
-          <View style={styles.grid}>
-            {mediaItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.gridItem}
-                onPress={() => setSelectedImage(item.uri)}
-              >
-                <Image
-                  source={{ uri: item.uri }}
-                  style={styles.gridImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </ScrollView>
     </View>
   );
 }
@@ -309,94 +276,98 @@ export default function PostScreen({ navigation }: PostScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFEEB7",
+    backgroundColor: "#fff",
+    paddingBottom: Platform.OS === "ios" ? 90 : 60,
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingBottom: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: "600",
+    color: "#000",
   },
-  nextButton: {
-    color: "#007AFF",
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  nextButtonDisabled: {
-    color: "#ccc",
+  headerRight: {
+    width: 40,
   },
   previewContainer: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#f0f0f0",
+    flex: 0.8,
+    backgroundColor: "#fff",
+    marginHorizontal: 20,
+    marginVertical: 10,
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   previewImage: {
     width: "100%",
     height: "100%",
+    resizeMode: "cover",
   },
   previewPlaceholder: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#f8f8f8",
   },
   previewPlaceholderText: {
     color: "#999",
     fontSize: 16,
   },
-  controls: {
+  iconContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    paddingVertical: 10,
+    gap: 40,
   },
-  dropdownContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  dropdownLabel: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  actionButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  circularButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  iconButton: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
   },
-  gridContainer: {
-    flex: 1,
+  bottomContainer: {
+    padding: 20,
+    paddingBottom: 0,
+    backgroundColor: "#fff",
+  },
+  continueButton: {
+    backgroundColor: "#000831",
+    height: 50,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  continueButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  gridItem: {
-    width: GRID_ITEM_SIZE,
-    height: GRID_ITEM_SIZE,
-    padding: 1,
-  },
-  gridImage: {
-    width: "100%",
-    height: "100%",
   },
 });

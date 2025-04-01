@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -8,13 +8,15 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Alert,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RouteProp } from '@react-navigation/native';
-import { postService } from '../services/postService';
+  ScrollView,
+  Modal,
+  Keyboard,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RouteProp } from "@react-navigation/native";
+import { postService } from "../services/postService";
 
 type RootStackParamList = {
   Login: undefined;
@@ -22,21 +24,28 @@ type RootStackParamList = {
   Main: undefined;
   Caption: {
     imageUri: string;
+    userName: string;
   };
 };
 
-type CaptionScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Caption'>;
-type CaptionScreenRouteProp = RouteProp<RootStackParamList, 'Caption'>;
+type CaptionScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  "Caption"
+>;
+type CaptionScreenRouteProp = RouteProp<RootStackParamList, "Caption">;
 
 type CaptionScreenProps = {
   navigation: CaptionScreenNavigationProp;
   route: CaptionScreenRouteProp;
 };
 
-export default function CaptionScreen({ navigation, route }: CaptionScreenProps) {
-  const [caption, setCaption] = useState('');
-  const [hashtags, setHashtags] = useState('');
+export default function CaptionScreen({
+  navigation,
+  route,
+}: CaptionScreenProps) {
+  const [caption, setCaption] = useState("");
   const [isPosting, setIsPosting] = useState(false);
+  const [showCaptionOverlay, setShowCaptionOverlay] = useState(false);
   const { imageUri } = route.params;
 
   const handleShare = async () => {
@@ -45,169 +54,260 @@ export default function CaptionScreen({ navigation, route }: CaptionScreenProps)
     try {
       setIsPosting(true);
 
-      // Validate inputs
       if (!caption.trim()) {
-        Alert.alert('Error', 'Please add a caption to your post');
+        Alert.alert("Error", "Please add a caption to your post");
         return;
       }
 
-      // Create post using the service
-      await postService.createPost(
-        imageUri,
-        caption,
-        hashtags.trim().split(' ').filter(tag => tag.startsWith('#'))
-      );
+      await postService.createPost(imageUri, caption, []);
 
-      Alert.alert(
-        'Success',
-        'Your post has been shared!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Main'),
-          },
-        ]
-      );
+      Alert.alert("Success", "Your post has been shared!", [
+        {
+          text: "OK",
+          onPress: () => navigation.navigate("Main"),
+        },
+      ]);
     } catch (error) {
-      console.error('Error sharing post:', error);
-      let errorMessage = 'Failed to share your post. Please try again.';
-      
+      console.error("Error sharing post:", error);
+      let errorMessage = "Failed to share your post. Please try again.";
+
       if (error instanceof Error) {
-        if (error.message.includes('logged in')) {
-          errorMessage = 'Please log in to share posts.';
-        } else if (error.message.includes('profile not found')) {
-          errorMessage = 'Your profile was not found. Please try logging in again.';
-        } else if (error.message.includes('permission-denied')) {
-          errorMessage = 'You do not have permission to share posts. Please check your account status.';
+        if (error.message.includes("logged in")) {
+          errorMessage = "Please log in to share posts.";
+        } else if (error.message.includes("profile not found")) {
+          errorMessage =
+            "Your profile was not found. Please try logging in again.";
+        } else if (error.message.includes("permission-denied")) {
+          errorMessage =
+            "You do not have permission to share posts. Please check your account status.";
         }
       }
-      
-      Alert.alert('Error', errorMessage);
+
+      Alert.alert("Error", errorMessage);
     } finally {
       setIsPosting(false);
     }
   };
 
+  const handleDone = () => {
+    Keyboard.dismiss();
+    setShowCaptionOverlay(false);
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
-    >
+    <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Post</Text>
-        <TouchableOpacity 
-          onPress={handleShare}
-          disabled={isPosting}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
         >
-          <Text style={[
-            styles.shareButton,
-            isPosting && styles.shareButtonDisabled
-          ]}>
-            {isPosting ? 'Sharing...' : 'Share'}
-          </Text>
+          <Ionicons name="chevron-back-outline" size={28} color="#000" />
         </TouchableOpacity>
+        <Text style={styles.headerTitle}>New post</Text>
+        <View style={styles.headerRight} />
       </View>
 
-      <ScrollView style={styles.content}>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Image Preview */}
         <View style={styles.imageContainer}>
-          <Image 
-            source={{ uri: imageUri }} 
+          <Image
+            source={{ uri: imageUri }}
             style={styles.image}
             resizeMode="cover"
           />
         </View>
 
-        {/* Caption Input */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.captionInput}
-            placeholder="Write a caption..."
-            multiline
-            value={caption}
-            onChangeText={setCaption}
-            autoFocus={false}
-            editable={!isPosting}
-          />
-        </View>
+        {/* Caption Preview */}
+        <TouchableOpacity
+          style={styles.captionPreviewContainer}
+          onPress={() => setShowCaptionOverlay(true)}
+        >
+          {caption ? (
+            <Text style={styles.captionPreviewText} numberOfLines={3}>
+              {caption}
+            </Text>
+          ) : (
+            <Text style={styles.captionPlaceholder}>
+              Tap to write a caption...
+            </Text>
+          )}
+        </TouchableOpacity>
 
-        {/* Hashtags Input */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.hashtagInput}
-            placeholder="Add hashtags (separate with spaces)"
-            value={hashtags}
-            onChangeText={setHashtags}
-            autoCapitalize="none"
-            editable={!isPosting}
-          />
+        {/* Share Button */}
+        <View style={styles.bottomContainer}>
+          <TouchableOpacity
+            style={styles.shareButton}
+            onPress={handleShare}
+            disabled={isPosting}
+          >
+            <Text style={styles.shareButtonText}>
+              {isPosting ? "Sharing..." : "Share"}
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {/* Caption Overlay */}
+      <Modal
+        visible={showCaptionOverlay}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCaptionOverlay(false)}
+      >
+        <View style={styles.overlayContainer}>
+          <View style={styles.overlayContent}>
+            <View style={styles.overlayHeader}>
+              <Text style={styles.overlayTitle}>Write a caption</Text>
+              <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
+                <Text style={styles.doneButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.overlayInput}
+              placeholder="Write a caption..."
+              multiline
+              value={caption}
+              onChangeText={setCaption}
+              autoFocus={true}
+              editable={!isPosting}
+            />
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFEEB7',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    backgroundColor: "#fff",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    paddingBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingBottom: 16,
+    backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    marginBottom: 10,
+    borderBottomColor: "#f0f0f0",
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#000",
   },
-  shareButton: {
-    color: '#007AFF',
-    fontSize: 17,
-    fontWeight: '600',
+  headerRight: {
+    width: 40,
   },
-  shareButtonDisabled: {
-    opacity: 0.5,
-  },
-  content: {
+  scrollContainer: {
     flex: 1,
-    paddingTop: 10,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: Platform.OS === "ios" ? 100 : 80, // Extra padding at bottom for better scrolling
   },
   imageContainer: {
-    width: '100%',
+    width: "100%",
     aspectRatio: 1,
-    backgroundColor: '#f0f0f0',
-    marginBottom: 15,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
-  inputContainer: {
+  captionPreviewContainer: {
+    backgroundColor: "#f8f8f8",
+    borderRadius: 12,
     padding: 16,
-    paddingVertical: 20,
+    minHeight: 80,
+    marginBottom: 20,
+  },
+  captionPreviewText: {
+    fontSize: 16,
+    color: "#000",
+    lineHeight: 22,
+  },
+  captionPlaceholder: {
+    fontSize: 16,
+    color: "#999",
+  },
+  bottomContainer: {
+    width: "100%",
+  },
+  shareButton: {
+    backgroundColor: "#000831",
+    height: 50,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  shareButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  overlayContainer: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  overlayContent: {
+    flex: 1,
+    backgroundColor: "#fff",
+    marginTop: 100,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  overlayHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    marginBottom: 10,
+    borderBottomColor: "#f0f0f0",
   },
-  captionInput: {
-    minHeight: 100,
+  overlayTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000",
+  },
+  doneButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  doneButtonText: {
     fontSize: 16,
-    textAlignVertical: 'top',
-    padding: 0,
+    fontWeight: "600",
+    color: "#000831",
   },
-  hashtagInput: {
+  overlayInput: {
+    flex: 1,
+    padding: 16,
     fontSize: 16,
-    padding: 0,
+    color: "#000",
+    textAlignVertical: "top",
   },
-}); 
+});

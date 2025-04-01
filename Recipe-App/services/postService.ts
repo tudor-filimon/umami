@@ -1,5 +1,13 @@
-import { collection, addDoc, serverTimestamp, getDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
-import { firestore, auth } from '../firebaseConfig';
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  getDoc,
+  doc,
+  updateDoc,
+  setDoc,
+} from "firebase/firestore";
+import { firestore, auth } from "../firebaseConfig";
 
 export type Post = {
   id: string;
@@ -14,30 +22,42 @@ export type Post = {
 };
 
 export const postService = {
-  async createPost(imageUrl: string, caption: string, hashtags: string[]): Promise<void> {
+  async createPost(
+    imageUrl: string,
+    caption: string,
+    hashtags: string[]
+  ): Promise<void> {
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        throw new Error('You need to be logged in to create a post');
+        throw new Error("You need to be logged in to create a post");
       }
+
+      // Get user's name from Firestore
+      const userDoc = await getDoc(doc(firestore, "users", currentUser.uid));
+      if (!userDoc.exists()) {
+        throw new Error("User profile not found");
+      }
+      const userName = userDoc.data().name;
 
       // Create post data
       const postData = {
         userId: currentUser.uid,
-        userName: currentUser.displayName || 'Anonymous',
+        userName: userName,
         imageUrl,
         caption: caption.trim(),
-        hashtags: hashtags.filter(tag => tag.startsWith('#')),
+        hashtags: hashtags.filter((tag) => tag.startsWith("#")),
         createdAt: serverTimestamp(),
         likes: 0,
-        comments: []
+        likedBy: [],
+        comments: [],
       };
 
       // Add to Firestore
-      const postsRef = collection(firestore, 'posts');
+      const postsRef = collection(firestore, "posts");
       await addDoc(postsRef, postData);
     } catch (error) {
-      console.error('Error in createPost:', error);
+      console.error("Error in createPost:", error);
       throw error;
     }
   },
@@ -45,19 +65,19 @@ export const postService = {
   async likePost(postId: string): Promise<void> {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      throw new Error('You need to be logged in to like a post');
+      throw new Error("You need to be logged in to like a post");
     }
 
-    const postRef = doc(firestore, 'posts', postId);
+    const postRef = doc(firestore, "posts", postId);
     const postDoc = await getDoc(postRef);
-    
+
     if (!postDoc.exists()) {
-      throw new Error('Post not found');
+      throw new Error("Post not found");
     }
 
     const postData = postDoc.data() as Post;
     await updateDoc(postRef, {
-      likes: postData.likes + 1
+      likes: postData.likes + 1,
     });
-  }
-}; 
+  },
+};
