@@ -1,8 +1,9 @@
 import { collection, addDoc, serverTimestamp, getDoc, doc, updateDoc, setDoc } from 'firebase/firestore';
 import { firestore, auth } from '../firebaseConfig';
+import { uploadImage } from './imageService';
 
 export type Post = {
-  id: string;
+  id?: string;
   userId: string;
   userName: string;
   imageUrl: string;
@@ -13,35 +14,37 @@ export type Post = {
   comments: any[];
 };
 
-export const postService = {
-  async createPost(imageUrl: string, caption: string, hashtags: string[]): Promise<void> {
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) {
-        throw new Error('You need to be logged in to create a post');
-      }
-
-      // Create post data
-      const postData = {
-        userId: currentUser.uid,
-        userName: currentUser.displayName || 'Anonymous',
-        imageUrl,
-        caption: caption.trim(),
-        hashtags: hashtags.filter(tag => tag.startsWith('#')),
-        createdAt: serverTimestamp(),
-        likes: 0,
-        comments: []
-      };
-
-      // Add to Firestore
-      const postsRef = collection(firestore, 'posts');
-      await addDoc(postsRef, postData);
-    } catch (error) {
-      console.error('Error in createPost:', error);
-      throw error;
+export const createPost = async (imageUri: string, caption: string, hashtags: string[]): Promise<void> => {
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User must be logged in to create a post');
     }
-  },
 
+    // Upload image to Firebase Storage
+    const imageUrl = await uploadImage(imageUri);
+
+    // Create post in Firestore
+    const postData: Omit<Post, 'id'> = {
+      userId: user.uid,
+      userName: user.displayName || 'Anonymous',
+      imageUrl,
+      caption,
+      hashtags,
+      createdAt: serverTimestamp(),
+      likes: 0,
+      comments: []
+    };
+
+    await addDoc(collection(firestore, 'posts'), postData);
+  } catch (error) {
+    console.error('Error creating post:', error);
+    throw error;
+  }
+};
+
+export const postService = {
+  createPost,
   async likePost(postId: string): Promise<void> {
     const currentUser = auth.currentUser;
     if (!currentUser) {

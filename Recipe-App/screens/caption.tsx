@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
 import { postService } from '../services/postService';
+import { globalStyles } from '../styles/globalStyles';
 
 type RootStackParamList = {
   Login: undefined;
@@ -33,6 +34,7 @@ type CaptionScreenProps = {
   route: CaptionScreenRouteProp;
 };
 
+// ... imports unchanged
 export default function CaptionScreen({ navigation, route }: CaptionScreenProps) {
   const [caption, setCaption] = useState('');
   const [hashtags, setHashtags] = useState('');
@@ -45,43 +47,34 @@ export default function CaptionScreen({ navigation, route }: CaptionScreenProps)
     try {
       setIsPosting(true);
 
-      // Validate inputs
       if (!caption.trim()) {
         Alert.alert('Error', 'Please add a caption to your post');
         return;
       }
 
-      // Create post using the service
       await postService.createPost(
         imageUri,
         caption,
         hashtags.trim().split(' ').filter(tag => tag.startsWith('#'))
       );
 
-      Alert.alert(
-        'Success',
-        'Your post has been shared!',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('Main'),
-          },
-        ]
-      );
+      Alert.alert('Success', 'Your post has been shared!', [
+        { text: 'OK', onPress: () => navigation.navigate('Main') },
+      ]);
     } catch (error) {
       console.error('Error sharing post:', error);
       let errorMessage = 'Failed to share your post. Please try again.';
-      
+
       if (error instanceof Error) {
         if (error.message.includes('logged in')) {
           errorMessage = 'Please log in to share posts.';
         } else if (error.message.includes('profile not found')) {
           errorMessage = 'Your profile was not found. Please try logging in again.';
         } else if (error.message.includes('permission-denied')) {
-          errorMessage = 'You do not have permission to share posts. Please check your account status.';
+          errorMessage = 'You do not have permission to share posts.';
         }
       }
-      
+
       Alert.alert('Error', errorMessage);
     } finally {
       setIsPosting(false);
@@ -89,54 +82,48 @@ export default function CaptionScreen({ navigation, route }: CaptionScreenProps)
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
-    >
+    <View style={[globalStyles.container, styles.container]}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Post</Text>
-        <TouchableOpacity 
-          onPress={handleShare}
-          disabled={isPosting}
-        >
-          <Text style={[
-            styles.shareButton,
-            isPosting && styles.shareButtonDisabled
-          ]}>
+        <Text style={styles.headerTitle}>New post</Text>
+        <TouchableOpacity onPress={handleShare} disabled={isPosting}>
+          <Text style={[styles.shareButton, isPosting && styles.shareButtonDisabled]}>
             {isPosting ? 'Sharing...' : 'Share'}
           </Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content}>
-        {/* Image Preview */}
+        {/* Image */}
         <View style={styles.imageContainer}>
-          <Image 
-            source={{ uri: imageUri }} 
-            style={styles.image}
-            resizeMode="cover"
-          />
+          <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
         </View>
 
         {/* Caption Input */}
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.captionInput}
-            placeholder="Write a caption..."
-            multiline
-            value={caption}
-            onChangeText={setCaption}
-            autoFocus={false}
-            editable={!isPosting}
-          />
-        </View>
+        <TextInput
+          style={styles.captionInput}
+          placeholder="Add a caption..."
+          multiline
+          value={caption}
+          onChangeText={setCaption}
+          editable={!isPosting}
+        />
 
-        {/* Hashtags Input */}
-        <View style={styles.inputContainer}>
+        {/* Options */}
+        <TouchableOpacity style={styles.optionRow}>
+          <Ionicons name="person-add-outline" size={20} color="#666" />
+          <Text style={styles.optionText}>Tag people</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.optionRow}>
+          <Ionicons name="location-outline" size={20} color="#666" />
+          <Text style={styles.optionText}>Add location</Text>
+        </TouchableOpacity>
+
+        <View style={styles.hashtagContainer}>
           <TextInput
             style={styles.hashtagInput}
             placeholder="Add hashtags (separate with spaces)"
@@ -147,25 +134,24 @@ export default function CaptionScreen({ navigation, route }: CaptionScreenProps)
           />
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFEEB7',
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
   },
   header: {
+    paddingTop: Platform.OS === 'ios' ? 70 : 40,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    marginBottom: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#ccc',
+    backgroundColor: '#FFE683',
   },
   headerTitle: {
     fontSize: 17,
@@ -181,33 +167,42 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: 10,
   },
   imageContainer: {
     width: '100%',
     aspectRatio: 1,
     backgroundColor: '#f0f0f0',
-    marginBottom: 15,
   },
   image: {
     width: '100%',
     height: '100%',
   },
-  inputContainer: {
-    padding: 16,
-    paddingVertical: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    marginBottom: 10,
-  },
   captionInput: {
-    minHeight: 100,
+    padding: 16,
     fontSize: 16,
+    minHeight: 100,
     textAlignVertical: 'top',
-    padding: 0,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderColor: '#e0e0e0',
+  },
+  optionText: {
+    marginLeft: 12,
+    fontSize: 15,
+    color: '#333',
+  },
+  hashtagContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
   },
   hashtagInput: {
     fontSize: 16,
-    padding: 0,
+    color: '#000',
   },
-}); 
+});
