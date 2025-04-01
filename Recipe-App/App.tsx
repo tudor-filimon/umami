@@ -10,6 +10,7 @@ import ProfileScreen from './screens/profile';
 import LoginScreen from './screens/login';
 import SignUpScreen from './screens/signup';
 import CaptionScreen from './screens/caption';
+import EditProfileScreen from './screens/editprofile';
 import { colors } from './styles/globalStyles';
 
 type RootStackParamList = {
@@ -17,6 +18,7 @@ type RootStackParamList = {
   SignUp: undefined;
   Main: undefined;
   Caption: { imageUri: string };
+  EditProfile: undefined;
 };
 
 const Tab = createBottomTabNavigator();
@@ -110,6 +112,11 @@ export default function App() {
           options={{
             headerShown: false
           }}
+        />
+        <Stack.Screen 
+          name="EditProfile" 
+          component={EditProfileScreen}
+          options={{ headerShown: false }}
         />
       </Stack.Navigator>
     </NavigationContainer>
