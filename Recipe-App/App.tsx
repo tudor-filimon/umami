@@ -1,28 +1,28 @@
-import * as React from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
 import { Image } from 'react-native';
+import LoginScreen from './screens/login';
+import SignUpScreen from './screens/signup';
+import CaptionScreen from './screens/caption';
+import { colors } from './styles/globalStyles';
 import HomeScreen from './screens/home';
 import GenerateScreen from './screens/generate';
 import PostScreen from './screens/post';
 import ProfileScreen from './screens/profile';
-import LoginScreen from './screens/login';
-import SignUpScreen from './screens/signup';
-import CaptionScreen from './screens/caption';
-import EditProfileScreen from './screens/editprofile';
-import { colors } from './styles/globalStyles';
+import MessagesScreen from './screens/messages';
 
-type RootStackParamList = {
+export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined;
   Caption: { imageUri: string };
-  EditProfile: undefined;
+  Messages: undefined;
 };
 
 const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function MainTabs() {
   return (
@@ -97,7 +97,6 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator
         screenOptions={{
-          cardStyle: { backgroundColor: colors.background },
           headerStyle: { backgroundColor: colors.navBar },
           headerTintColor: colors.text
         }}
@@ -114,9 +113,11 @@ export default function App() {
           }}
         />
         <Stack.Screen 
-          name="EditProfile" 
-          component={EditProfileScreen}
-          options={{ headerShown: false }}
+          name="Messages" 
+          component={MessagesScreen} 
+          options={{
+            headerShown: false
+          }}
         />
       </Stack.Navigator>
     </NavigationContainer>

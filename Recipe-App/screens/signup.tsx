@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { auth, firestore } from '../firebaseConfig';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 type RootStackParamList = {
   Login: undefined;
@@ -12,6 +12,30 @@ type RootStackParamList = {
 };
 
 type SignUpScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SignUp'>;
+
+const createUserIfNotExists = async (userId: string) => {
+  try {
+    const userRef = doc(firestore, "users", userId);
+    const userDoc = await getDoc(userRef);
+
+    if (!userDoc.exists()) {
+      await setDoc(userRef, {
+        name: name,
+        avatar: undefined,
+        pronouns: "",
+        followers: 0,
+        following: 0,
+        createdAt: serverTimestamp(),
+      });
+      console.log("User profile created successfully");
+    } else {
+      console.log("User profile already exists");
+    }
+  } catch (error) {
+    console.error("Error creating user profile:", error);
+    throw error;
+  }
+};
 
 const SignUpScreen = () => {
   const [email, setEmail] = useState('');
@@ -22,26 +46,24 @@ const SignUpScreen = () => {
   const navigation = useNavigation<SignUpScreenNavigationProp>();
 
   const handleSignUp = async () => {
+    if (!email || !password || !confirmPassword) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      Alert.alert("Error", "Passwords do not match");
       return;
     }
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const userId = userCredential.user.uid;
-
-      // Save additional user info to Firestore
-      await setDoc(doc(firestore, 'users', userId), {
-        name,
-        age,
-      });
-
+      await createUserIfNotExists(userCredential.user.uid);
       Alert.alert('Sign Up Successful', 'Welcome!', [
         { text: 'OK', onPress: () => navigation.navigate('Login') }
       ]);
-    } catch (error) {
-      Alert.alert('Sign Up Error', (error as Error).message);
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
     }
   };
 

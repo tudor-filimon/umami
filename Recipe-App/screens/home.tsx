@@ -23,8 +23,18 @@ import {
   arrayUnion,
   Timestamp,
   getDoc,
+  increment,
+  deleteDoc,
+  setDoc,
+  addDoc,
+  where,
+  serverTimestamp,
 } from "firebase/firestore";
 import { firestore, auth } from "../firebaseConfig";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../App";
+import { colors } from "../styles/globalStyles";
 
 type Comment = {
   id: string;
@@ -43,6 +53,7 @@ type Post = {
   likes: number;
   likedBy: string[];
   comments: Comment[];
+  userId: string;
 };
 
 const InstagramPost = ({ post }: { post: Post }) => {
@@ -54,13 +65,29 @@ const InstagramPost = ({ post }: { post: Post }) => {
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<Comment[]>(post.comments || []);
   const [userName, setUserName] = useState<string>("");
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setCurrentUserId(user.uid);
+      console.log("Setting current user ID:", user.uid);
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log("Post data:", post);
+    console.log("Current user ID:", currentUserId);
+    console.log("Post user ID:", post.userId);
+    console.log("Should show follow button:", currentUserId && currentUserId !== post.userId);
+    
     fetchUserName();
-    // Initialize like status and count from post data
-    setIsLiked(post.likedBy?.includes(currentUserId) || false);
+    checkIfFollowing();
+    setIsLiked(currentUserId ? post.likedBy?.includes(currentUserId) || false : false);
     setLikesCount(post.likes || 0);
-  }, [post]);
+  }, [post, currentUserId]);
 
   const fetchUserName = async () => {
     const currentUser = auth.currentUser;
@@ -76,8 +103,94 @@ const InstagramPost = ({ post }: { post: Post }) => {
     }
   };
 
-  // User ID from auth
-  const currentUserId = post.userName;
+  const checkIfFollowing = async () => {
+    if (!currentUserId || currentUserId === post.userId) {
+      console.log('Skipping follow check:', { currentUserId, postUserId: post.userId });
+      return;
+    }
+
+    try {
+      console.log('Checking follow status for:', { currentUserId, postUserId: post.userId });
+      const followsRef = collection(firestore, 'follows');
+      const q = query(
+        followsRef,
+        where('followerId', '==', currentUserId),
+        where('followingId', '==', post.userId)
+      );
+      const querySnapshot = await getDocs(q);
+      const isFollowing = !querySnapshot.empty;
+      setIsFollowing(isFollowing);
+      console.log('Follow status result:', {
+        currentUserId,
+        postUserId: post.userId,
+        isFollowing,
+        querySize: querySnapshot.size
+      });
+    } catch (error) {
+      console.error('Error checking follow status:', error);
+      // Don't set isFollowing to false on error, keep the current state
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!currentUserId || currentUserId === post.userId || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const followsRef = collection(firestore, 'follows');
+      const q = query(
+        followsRef,
+        where('followerId', '==', currentUserId),
+        where('followingId', '==', post.userId)
+      );
+      const querySnapshot = await getDocs(q);
+
+      // Get both user document references
+      const followedUserRef = doc(firestore, 'users', post.userId);
+      const currentUserRef = doc(firestore, 'users', currentUserId);
+
+      if (querySnapshot.empty) {
+        // Follow
+        await addDoc(followsRef, {
+          followerId: currentUserId,
+          followingId: post.userId,
+          createdAt: serverTimestamp()
+        });
+        
+        // Update follower count for the followed user
+        await updateDoc(followedUserRef, {
+          followersCount: increment(1)
+        });
+        
+        // Update following count for the current user
+        await updateDoc(currentUserRef, {
+          followingCount: increment(1)
+        });
+        
+        setIsFollowing(true);
+      } else {
+        // Unfollow
+        await deleteDoc(querySnapshot.docs[0].ref);
+        
+        // Update follower count for the followed user
+        await updateDoc(followedUserRef, {
+          followersCount: increment(-1)
+        });
+        
+        // Update following count for the current user
+        await updateDoc(currentUserRef, {
+          followingCount: increment(-1)
+        });
+        
+        setIsFollowing(false);
+      }
+    } catch (error) {
+      console.error('Error following/unfollowing:', error);
+      Alert.alert('Error', 'Failed to update follow status');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLike = async () => {
     try {
@@ -211,7 +324,20 @@ const InstagramPost = ({ post }: { post: Post }) => {
             source={{ uri: "https://via.placeholder.com/32" }}
             style={styles.profilePic}
           />
-          <Text style={styles.username}>{post.userName}</Text>
+          <View style={styles.userNameContainer}>
+            <Text style={styles.username}>{post.userName}</Text>
+            {currentUserId && currentUserId !== post.userId && (
+              <TouchableOpacity 
+                onPress={handleFollow}
+                disabled={isLoading}
+                style={[styles.followButton, isFollowing && styles.followingButton]}
+              >
+                <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
+                  {isLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
         <Ionicons name="ellipsis-horizontal" size={24} color="black" />
       </View>
@@ -310,9 +436,10 @@ const InstagramPost = ({ post }: { post: Post }) => {
   );
 };
 
-const HomeScreen = () => {
+const HomeScreen: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const fetchPosts = async () => {
     try {
@@ -320,10 +447,19 @@ const HomeScreen = () => {
       const q = query(postsRef, orderBy("createdAt", "desc"));
 
       const snapshot = await getDocs(q);
-      const postsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Post[];
+      const postsData = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        console.log("Post data from Firestore:", {
+          id: doc.id,
+          userId: data.userId,
+          userName: data.userName,
+          likedBy: data.likedBy || []
+        });
+        return {
+          id: doc.id,
+          ...data,
+        };
+      }) as Post[];
       setPosts(postsData);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -361,6 +497,15 @@ const HomeScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Home</Text>
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('Messages')}
+            style={styles.messagesButton}
+          >
+            <Ionicons name="chatbubble-outline" size={24} color={colors.text} />
+          </TouchableOpacity>
+        </View>
         {posts.map((post) => (
           <InstagramPost key={post.id} post={post} />
         ))}
@@ -399,15 +544,32 @@ const styles = StyleSheet.create({
     marginVertical: 6,
   },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
-    backgroundColor: "#FFEEB7",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 60,
+    paddingBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  messagesButton: {
+    padding: 8,
   },
   userInfo: {
     flexDirection: "row",
     alignItems: "center",
+    flex: 1,
+  },
+  userNameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 8,
+    flex: 1,
+    justifyContent: "space-between",
   },
   profilePic: {
     width: 32,
@@ -415,8 +577,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   username: {
-    marginLeft: 8,
     fontWeight: "600",
+    marginRight: 8,
   },
   postImage: {
     width: "100%",
@@ -584,6 +746,32 @@ const styles = StyleSheet.create({
   emptyLikesText: {
     fontSize: 16,
     color: "#666",
+  },
+  followButton: {
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginLeft: 8,
+    minWidth: 70,
+    alignItems: 'center',
+  },
+  followingButton: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#CCCCCC',
+    borderWidth: 1,
+  },
+  followButtonText: {
+    color: '#007AFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  followingButtonText: {
+    color: '#222222',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
 

@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation } from '@react-navigation/native';
-import { auth } from '../firebaseConfig'; // Import Firebase config
+import { auth, firestore } from '../firebaseConfig'; // Import Firebase config
 import { signInWithEmailAndPassword } from 'firebase/auth'; // Import the function
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 type RootStackParamList = {
   Login: undefined;
@@ -14,20 +15,44 @@ type RootStackParamList = {
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
+const createUserIfNotExists = async () => {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const userRef = doc(firestore, 'users', user.uid);
+  const snapshot = await getDoc(userRef);
+
+  if (!snapshot.exists()) {
+    await setDoc(userRef, {
+      name: user.email?.split('@')[0] || 'New User',
+      avatar: 'https://via.placeholder.com/150',
+      followers: 0,
+      following: 0,
+      createdAt: new Date()
+    });
+    console.log('✅ New user profile created in Firestore');
+  } else {
+    console.log('ℹ️ User profile already exists');
+  }
+};
+
 const LoginScreen = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-
   const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
     try {
-      await signInWithEmailAndPassword(auth, email, password); // Use the auth object
-      Alert.alert('Login Successful', 'Welcome back!');
-      navigation.replace('Main'); // Navigate to the main app if login is successful
-    } catch (error) {
-      const errorMessage = (error as Error).message;
-      Alert.alert('Error', errorMessage);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      await createUserIfNotExists();
+      navigation.replace('Main');
+    } catch (error: any) {
+      Alert.alert("Error", error.message);
     }
   };
 

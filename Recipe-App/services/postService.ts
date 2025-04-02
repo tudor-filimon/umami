@@ -11,6 +11,7 @@ export type Post = {
   hashtags: string[];
   createdAt: any;
   likes: number;
+  likedBy: string[];
   comments: any[];
 };
 
@@ -21,18 +22,27 @@ export const createPost = async (imageUri: string, caption: string, hashtags: st
       throw new Error('User must be logged in to create a post');
     }
 
+    // Get user's name from Firestore
+    const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+    if (!userDoc.exists()) {
+      throw new Error('User profile not found');
+    }
+    const userData = userDoc.data();
+    const userName = userData.name || 'Anonymous';
+
     // Upload image to Firebase Storage
     const imageUrl = await uploadImage(imageUri);
 
     // Create post in Firestore
     const postData: Omit<Post, 'id'> = {
       userId: user.uid,
-      userName: user.displayName || 'Anonymous',
+      userName: userName,
       imageUrl,
       caption,
       hashtags,
       createdAt: serverTimestamp(),
       likes: 0,
+      likedBy: [],
       comments: []
     };
 
