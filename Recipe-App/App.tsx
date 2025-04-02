@@ -19,7 +19,7 @@ type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined;
-  Caption: { imageUri: string };
+  Caption: { imageUri: string; userName: string };
 };
 
 const Tab = createBottomTabNavigator();
@@ -30,61 +30,112 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: colors.navBar,
-          borderTopColor: colors.text + '20',
+          backgroundColor: "#ffffff",
+          borderTopWidth: 0,
+          elevation: 0,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          borderTopLeftRadius: 15,
+          borderTopRightRadius: 15,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: -2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
         },
-        tabBarActiveTintColor: colors.text,
-        tabBarInactiveTintColor: colors.text + '80',
+        tabBarActiveTintColor: "#000000",
+        tabBarInactiveTintColor: "#000000",
+        tabBarShowLabel: false,
         headerStyle: {
-          backgroundColor: colors.navBar,
+          backgroundColor: "#ffffff",
+          elevation: 0,
+          height: 110,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: 2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 3,
         },
-        headerTintColor: colors.text,
+        headerTitleContainerStyle: {
+          paddingBottom: 10,
+        },
+        headerTintColor: "#000831",
+        headerTitleStyle: {
+          fontFamily: "Inter_700Bold",
+          fontSize: 24,
+          color: "#000831",
+          textShadowColor: "rgba(0, 0, 0, 0.1)",
+          textShadowOffset: { width: 0, height: 1 },
+          textShadowRadius: 2,
+        },
+        headerTitleAlign: "center",
       }}
     >
-      <Tab.Screen 
-        name="Home" 
-        component={HomeScreen} 
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={require('./assets/home.png')}
-              style={{ width: size, height: size, tintColor: color }}
+          title: "Home",
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="home"
+              size={24}
+              color="#000831"
+              style={{ opacity: focused ? 1 : 0.5 }}
             />
           ),
         }}
       />
-      <Tab.Screen 
-        name="Generate" 
-        component={GenerateScreen} 
+      <Tab.Screen
+        name="Generate"
+        component={GenerateScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={require('./assets/generate.png')}
-              style={{ width: size, height: size, tintColor: color }}
+          title: "Generate",
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="search"
+              size={24}
+              color="#000831"
+              style={{ opacity: focused ? 1 : 0.5 }}
             />
           ),
         }}
       />
-      <Tab.Screen 
-        name="Post" 
-        component={PostScreen} 
+      <Tab.Screen
+        name="Post"
+        component={PostScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={require('./assets/post.png')}
-              style={{ width: size, height: size, tintColor: color }}
+          title: "Post",
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="add-circle"
+              size={24}
+              color="#000831"
+              style={{ opacity: focused ? 1 : 0.5 }}
             />
           ),
         }}
       />
-      <Tab.Screen 
-        name="Profile" 
-        component={ProfileScreen} 
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={require('./assets/profile.png')}
-              style={{ width: size, height: size, tintColor: color }}
+          title: "Profile",
+          tabBarIcon: ({ focused, size }) => (
+            <Ionicons
+              name="person"
+              size={24}
+              color="#000831"
+              style={{ opacity: focused ? 1 : 0.5 }}
             />
           ),
         }}
@@ -94,13 +145,62 @@ function MainTabs() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  React.useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+  }
+
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      theme={{
+        dark: false,
+        colors: {
+          primary: colors.text,
+          background: colors.background,
+          card: colors.navBar,
+          text: colors.text,
+          border: colors.text + "20",
+          notification: colors.text,
+        },
+        fonts: {
+          regular: {
+            fontFamily: "Inter_400Regular",
+            fontWeight: "400",
+          },
+          medium: {
+            fontFamily: "Inter_500Medium",
+            fontWeight: "500",
+          },
+          bold: {
+            fontFamily: "Inter_700Bold",
+            fontWeight: "700",
+          },
+          heavy: {
+            fontFamily: "Inter_700Bold",
+            fontWeight: "900",
+          },
+        },
+      }}
+    >
       <Stack.Navigator
         screenOptions={{
           cardStyle: { backgroundColor: colors.background },
           headerStyle: { backgroundColor: colors.navBar },
-          headerTintColor: colors.text
+          headerTintColor: colors.text,
+          headerTitleStyle: {
+            fontFamily: "Inter_600SemiBold",
+          },
         }}
         initialRouteName="Login"
       >
@@ -113,7 +213,7 @@ export default function App() {
           name="Caption" 
           component={CaptionScreen} 
           options={{
-            headerShown: false
+            headerShown: false,
           }}
         />
       </Stack.Navigator>
