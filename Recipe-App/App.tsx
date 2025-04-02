@@ -1,27 +1,19 @@
-import * as React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { createStackNavigator } from "@react-navigation/stack";
-import { Ionicons } from "@expo/vector-icons";
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
-import * as SplashScreen from "expo-splash-screen";
-import HomeScreen from "./screens/home";
-import GenerateScreen from "./screens/generate";
-import PostScreen from "./screens/post";
-import ProfileScreen from "./screens/profile";
-import LoginScreen from "./screens/login";
-import SignUpScreen from "./screens/signup";
-import CaptionScreen from "./screens/caption";
-import { colors } from "./styles/globalStyles";
+import * as React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
+import { Image } from 'react-native';
+import HomeScreen from './screens/home';
+import GenerateScreen from './screens/generate';
+import PostScreen from './screens/post';
+import ProfileScreen from './screens/profile';
+import LoginScreen from './screens/login';
+import SignUpScreen from './screens/signup';
+import CaptionScreen from './screens/caption';
+import EditProfileScreen from './screens/editprofile';
+import BigPostScreen from './screens/bigpost'; // Adjust the path if necessary
+import { colors } from './styles/globalStyles';
 
-// Keep the splash screen visible while we fetch resources
-SplashScreen.preventAutoHideAsync();
 
 type RootStackParamList = {
   Login: undefined;
@@ -212,24 +204,14 @@ export default function App() {
         }}
         initialRouteName="Login"
       >
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="SignUp"
-          component={SignUpScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Main"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Caption"
-          component={CaptionScreen}
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="BigPost" component={BigPostScreen} options={{ headerShown: false }} />
+        <Stack.Screen 
+          name="Caption" 
+          component={CaptionScreen} 
           options={{
             headerShown: false,
           }}

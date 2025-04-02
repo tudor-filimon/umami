@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
+import { BACKEND_URL } from '../constant';
+
 
 const HomeScreen = () => {
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
@@ -35,8 +37,7 @@ const HomeScreen = () => {
       });
 
       if (!result.canceled) {
-        Alert.alert('Image Selected', 'You have successfully chosen an image.');
-        console.log(result.assets[0].uri); // Handle the selected image URI
+        await generateRecipes(result);
       }
     }
   };
@@ -50,12 +51,54 @@ const HomeScreen = () => {
         quality: 1,
       });
 
+      console.log("meow moew mmeow meow meow");
+
       if (!result.canceled) {
-        Alert.alert('Image Captured', 'You have successfully taken a picture.');
-        console.log(result.assets[0].uri); // Handle the captured image URI
+        await generateRecipes(result);
+      }else{
+        console.log('Image selection cancelled');
       }
     }
   };
+
+
+  const generateRecipes = async (result: any) => {
+    const image = result.assets[0];
+    const uri = image.uri;
+    const fileName = uri.split('/').pop();
+
+    const match = /\.(\w+)$/.exec(fileName || '');
+    const type = match ? `image/${match[1]}` : `image`;
+
+    // FormData to send file
+    const formData = new FormData();
+    formData.append('image', {
+      uri,
+      name: fileName,
+      type,
+    } as any);
+
+    try {
+      console.log('Uploading image...');
+      const response = await fetch(BACKEND_URL + "/api/chatgpt/get-recipes/" , {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      console.log(response)
+      const data = await response.json();
+
+      Alert.alert('Upload Successful', `Response: ${JSON.stringify(data)}`);
+      console.log(data); // Or update your UI with this data
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      Alert.alert('Upload Failed', 'Something went wrong!');
+    }
+  }
 
   return (
     <View style={styles.container}>
