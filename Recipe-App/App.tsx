@@ -10,7 +10,10 @@ import ProfileScreen from './screens/profile';
 import LoginScreen from './screens/login';
 import SignUpScreen from './screens/signup';
 import CaptionScreen from './screens/caption';
+import EditProfileScreen from './screens/editprofile';
+import BigPostScreen from './screens/bigpost'; // Adjust the path if necessary
 import { colors } from './styles/globalStyles';
+
 
 type RootStackParamList = {
   Login: undefined;
@@ -104,6 +107,8 @@ export default function App() {
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="BigPost" component={BigPostScreen} options={{ headerShown: false }} />
         <Stack.Screen 
           name="Caption" 
           component={CaptionScreen} 
