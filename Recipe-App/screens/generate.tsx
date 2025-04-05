@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 import { BACKEND_URL } from '../constant';
@@ -15,11 +15,13 @@ type RootStackParamList = {
 
 type NavigationProps = StackNavigationProp<RootStackParamList>;
 
-const HomeScreen = () => {
+const GenerateScreen = () => {
   const navigation = useNavigation<NavigationProps>();
 
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
+  const [recipes, setRecipes] = useState<string[]>([]); // To store the generated recipes
+  const [loading, setLoading] = useState(false);
 
   const askGalleryPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -121,7 +123,7 @@ const HomeScreen = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>AI Recipe Generator</Text>
-      <Text style={styles.subtitle}>take a picture to start cooking...</Text>
+      <Text style={styles.subtitle}>Take a picture to start cooking...</Text>
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={handleUpload}>
@@ -131,6 +133,20 @@ const HomeScreen = () => {
           <Text style={styles.buttonText}>Camera</Text>
         </TouchableOpacity>
       </View>
+
+      {loading && <Text style={styles.loadingText}>Loading...</Text>}
+
+      {recipes.length > 0 && (
+        <FlatList
+          data={recipes}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.recipeContainer}>
+              <Text style={styles.recipeText}>{item}</Text>
+            </View>
+          )}
+        />
+      )}
     </View>
   );
 };
@@ -170,19 +186,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
   },
-  footerNav: {
-    position: 'absolute',
-    bottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingVertical: 10,
-    backgroundColor: 'white',
-  },
-  navIcon: {
-    color: 'black',
+  loadingText: {
+    marginTop: 20,
     fontSize: 16,
+    color: 'gray',
+  },
+  recipeContainer: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    width: '90%',
+    alignItems: 'center',
+  },
+  recipeText: {
+    fontSize: 16,
+    color: 'black',
   },
 });
 
-export default HomeScreen;
+export default GenerateScreen;
