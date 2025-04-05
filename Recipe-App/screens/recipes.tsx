@@ -14,7 +14,6 @@ import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-g
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { firestore as db } from '../firebaseConfig';
-import { getAuth } from 'firebase/auth';
 
 type RootStackParamList = {
   Recipes: { recipeData: any };
@@ -39,7 +38,7 @@ const saveRecipe = async (recipe: Recipe, uid: string) => {
   try {
     // Import Firebase
 
-    // Create a new object witnaut the id field and add uid
+    // Create a new object without the id field and add uid
     const { id, ...recipeData } = recipe;
     const savedRecipe = {
       ...recipeData,
@@ -125,11 +124,7 @@ const RecipeCard = ({
           { velocity: event.velocityX },
           () => {
             runOnJS(onSwipeComplete)();
-            // Import auth from Firebase
-            // Get the current user's ID
-            const auth = getAuth();
-            const userId = auth.currentUser?.uid || 'guest';
-            runOnJS(saveRecipe)(recipe, userId);
+            runOnJS(saveRecipe)(recipe, 'iy7CH21CAbW1R1ZUlezqlFYxgNG2'); // Replace with actual UID
           }
         );
         translateY.value = withSpring(0);
@@ -181,7 +176,7 @@ const RecipeCard = ({
       >
         <View style={styles.top}>
           <Image
-            source={{ uri: recipe.image }}
+            source={require('../assets/cuteBurger.png')}
             style={styles.cardImage}
           />
         </View>
@@ -252,7 +247,7 @@ const RecipePage = () => {
                       ? recipe.ingredients.join(', ') 
                       : recipe.ingredients || '',
                     steps: recipe.steps || [], // Add steps here
-                    image: "https://via.placeholder.com/318"
+                    image: require('../assets/cuteBurger.png')
                   }));
                   break;
                 } else if (parsedRecipe.recipes && Array.isArray(parsedRecipe.recipes)) {
@@ -264,7 +259,7 @@ const RecipePage = () => {
                       ? recipe.ingredients.join(', ')
                       : recipe.ingredients || '',
                     steps: recipe.steps || [], // Add steps here
-                    image: "https://via.placeholder.com/318"
+                    image: require('../assets/cuteBurger.png')
                   }));
                   break;
                 } else if (parsedRecipe.recipe1 || parsedRecipe.recipe2 || parsedRecipe.recipe3) {
@@ -279,7 +274,7 @@ const RecipePage = () => {
                         ? recipe.ingredients.join(', ')
                         : recipe.ingredients || '',
                       steps: recipe.steps || [], // Add this line to include steps
-                      image: "https://via.placeholder.com/318"
+                      image: require('../assets/cuteBurger.png')
                     };
                   });
                   break;
@@ -292,7 +287,7 @@ const RecipePage = () => {
                       ? parsedRecipe.ingredients.join(', ')
                       : parsedRecipe.ingredients || '',
                     steps: parsedRecipe.steps || [], // Add steps here
-                    image: "https://via.placeholder.com/318"
+                    image: require('../assets/cuteBurger.png')
                   });
                 }
               } catch (parseError) {
@@ -326,7 +321,7 @@ const RecipePage = () => {
                       id: processedRecipes.length,
                       name: name,
                       ingredients: ingredients,
-                      image: "https://via.placeholder.com/318"
+                      image: require('../assets/cuteBurger.png')
                     } as ExtractedRecipe);
                     });
                 }
@@ -340,12 +335,12 @@ const RecipePage = () => {
           if (processedRecipes.length === 0) {
             // Basic fallback: create recipe cards from whatever text is available
             processedRecipes = recipesData.map((recipeText: string, index: number) => {
-              return {
+                return {
                 id: index,
                 name: `Recipe ${index + 1}`,
                 ingredients: typeof recipeText === 'string' ? recipeText.substring(0, 200) + '...' : 'No ingredients available',
-                image: "https://via.placeholder.com/318"
-              };
+                image: require('../assets/cuteBurger.png')
+                };
             });
           }
           
@@ -377,7 +372,7 @@ const RecipePage = () => {
     });
 
     // Check if this was the last card
-    if (activeIndex.value + 1 > recipes.length - 1) {
+    if (activeIndex.value + 1 >= recipes.length - 1) {
       // Add a small delay for better UX
       setTimeout(() => {
         // navigation.goBack(); // should use navigation go back
@@ -480,8 +475,8 @@ const styles = StyleSheet.create({
     color: '#644536',
   },
   cardImage: {
-    width: 280,
-    height: 280, //changed from larger white block
+    width: 318,
+    height: 318,
     backgroundColor: 'white',
     padding: 10,
     borderRadius: 23,
