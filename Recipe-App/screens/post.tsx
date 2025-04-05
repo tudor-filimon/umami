@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  Alert,
-  Platform,
-  RefreshControl,
-  ActivityIndicator,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  Alert,
+  Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -27,7 +27,7 @@ type RootStackParamList = {
 };
 
 type PostScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, "Post">;
+  navigation: NativeStackNavigationProp<RootStackParamList, "Post">;
 };
 
 const { width } = Dimensions.get("window");
@@ -48,75 +48,75 @@ export default function PostScreen({ navigation }: PostScreenProps) {
   const [userName, setUserName] = useState<string>("");
   const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    checkAndRequestPermissions();
-    fetchUserName();
-  }, []);
+  useEffect(() => {
+    checkAndRequestPermissions();
+    fetchUserName();
+  }, []);
 
-  const fetchUserName = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      console.error("No current user found");
-      Alert.alert("Error", "Please log in to continue");
-      return;
-    }
+  const fetchUserName = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.error("No current user found");
+      Alert.alert("Error", "Please log in to continue");
+      return;
+    }
 
-    try {
-      const userDoc = await getDoc(doc(firestore, "users", currentUser.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log("User data:", userData);
-        setUserName(userData.name || currentUser.displayName || "Anonymous");
-      } else {
-        console.log("User document not found, using display name");
-        setUserName(currentUser.displayName || "Anonymous");
-      }
-    } catch (error) {
-      console.error("Error fetching user name:", error);
-      setUserName(currentUser.displayName || "Anonymous");
-    }
-  };
+    try {
+      const userDoc = await getDoc(doc(firestore, "users", currentUser.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("User data:", userData);
+        setUserName(userData.name || currentUser.displayName || "Anonymous");
+      } else {
+        console.log("User document not found, using display name");
+        setUserName(currentUser.displayName || "Anonymous");
+      }
+    } catch (error) {
+      console.error("Error fetching user name:", error);
+      setUserName(currentUser.displayName || "Anonymous");
+    }
+  };
 
-  const checkAndRequestPermissions = async () => {
-    try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      setHasPermission(status === "granted");
-      if (status === "granted") {
-        await loadMediaItems();
-      } else {
-        Alert.alert(
-          "Permission needed",
-          "Please grant media library permissions to view your photos."
-        );
-      }
-    } catch (error) {
-      console.error("Error checking permissions:", error);
-      Alert.alert("Error", "Failed to check permissions. Please try again.");
-    }
-  };
+  const checkAndRequestPermissions = async () => {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      setHasPermission(status === "granted");
+      if (status === "granted") {
+        await loadMediaItems();
+      } else {
+        Alert.alert(
+          "Permission needed",
+          "Please grant media library permissions to view your photos."
+        );
+      }
+    } catch (error) {
+      console.error("Error checking permissions:", error);
+      Alert.alert("Error", "Failed to check permissions. Please try again.");
+    }
+  };
 
-  const loadMediaItems = async () => {
-    try {
-      setLoading(true);
-      const albums = await MediaLibrary.getAlbumsAsync();
-      const cameraRoll = albums.find((album) => album.title === "Camera Roll");
+  const loadMediaItems = async () => {
+    try {
+      setLoading(true);
+      const albums = await MediaLibrary.getAlbumsAsync();
+      const cameraRoll = albums.find((album) => album.title === "Camera Roll");
 
-      if (!cameraRoll) {
-        Alert.alert("Error", "Could not find camera roll");
-        return;
-      }
+      if (!cameraRoll) {
+        Alert.alert("Error", "Could not find camera roll");
+        return;
+      }
 
-      const assets = await MediaLibrary.getAssetsAsync({
-        album: cameraRoll,
-        mediaType: ["photo"],
-        sortBy: ["creationTime"],
-        first: 100, // Increased to show more photos
-      });
+      const assets = await MediaLibrary.getAssetsAsync({
+        album: cameraRoll,
+        mediaType: ["photo"],
+        sortBy: ["creationTime"],
+        first: 100, // Increased to show more photos
+      });
 
-      const items = assets.assets.map((asset) => ({
-        id: asset.id,
-        uri: asset.uri,
-      }));
+      const items = assets.assets.map((asset) => ({
+        id: asset.id,
+        uri: asset.uri,
+      }));
 
       setMediaItems(items);
       if (items.length > 0 && selectedImages.length === 0) {
@@ -132,29 +132,29 @@ export default function PostScreen({ navigation }: PostScreenProps) {
     }
   };
 
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    loadMediaItems();
-  }, []);
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    loadMediaItems();
+  }, []);
 
-  const pickMultipleImages = async () => {
-    try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const pickMultipleImages = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Please grant camera roll permissions to select images."
-        );
-        return;
-      }
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Please grant camera roll permissions to select images."
+        );
+        return;
+      }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        quality: 1,
-      });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
 
       if (!result.canceled) {
         const newImages = result.assets.map((asset, index) => ({
@@ -171,22 +171,22 @@ export default function PostScreen({ navigation }: PostScreenProps) {
     }
   };
 
-  const openCamera = async () => {
-    try {
-      const { status } = await Camera.requestCameraPermissionsAsync();
+  const openCamera = async () => {
+    try {
+      const { status } = await Camera.requestCameraPermissionsAsync();
 
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Please grant camera permissions to take photos."
-        );
-        return;
-      }
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Please grant camera permissions to take photos."
+        );
+        return;
+      }
 
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
-      });
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
 
       if (!result.canceled) {
         const newImage = {
@@ -268,13 +268,13 @@ export default function PostScreen({ navigation }: PostScreenProps) {
     }
   };
 
-  if (hasPermission === null) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Requesting permissions...</Text>
-      </View>
-    );
-  }
+  if (hasPermission === null) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Requesting permissions...</Text>
+      </View>
+    );
+  }
 
   if (hasPermission === false) {
     return (

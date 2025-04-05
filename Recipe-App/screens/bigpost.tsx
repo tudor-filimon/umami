@@ -31,7 +31,6 @@ import {
 import { firestore, auth } from "../firebaseConfig";
 
 // Define types
-
 type Comment = {
   id: string;
   username: string;

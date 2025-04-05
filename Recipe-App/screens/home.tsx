@@ -433,6 +433,46 @@ const InstagramPost = ({ post }: { post: Post }) => {
             </>
           )}
       </View>
+      <View style={styles.imageContainer}>
+        <Image
+          source={{
+            uri:
+              post.imageUrls &&
+              Array.isArray(post.imageUrls) &&
+              post.imageUrls.length > 0
+                ? post.imageUrls[currentImageIndex]
+                : post.imageUrl,
+          }}
+          style={styles.postImage}
+        />
+        {post.imageUrls &&
+          Array.isArray(post.imageUrls) &&
+          post.imageUrls.length > 1 && (
+            <>
+              {currentImageIndex > 0 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.prevButton]}
+                  onPress={handlePrevImage}
+                >
+                  <Ionicons name="chevron-back" size={24} color="#fff" />
+                </TouchableOpacity>
+              )}
+              {currentImageIndex < post.imageUrls.length - 1 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.navButtonNext]}
+                  onPress={handleNextImage}
+                >
+                  <Ionicons name="chevron-forward" size={24} color="#fff" />
+                </TouchableOpacity>
+              )}
+              <View style={styles.imageCounter}>
+                <Text style={styles.imageCounterText}>
+                  {currentImageIndex + 1}/{post.imageUrls.length}
+                </Text>
+              </View>
+            </>
+          )}
+      </View>
 
       {/* Actions */}
       <View style={styles.actions}>
