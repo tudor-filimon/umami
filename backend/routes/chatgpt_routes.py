@@ -106,6 +106,13 @@ def get_recipes():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+        print(f"Response from OpenAI: {response}")
+        recipes = response['choices'][0]['message']['content'].strip().split('\n\n')
+        return jsonify(recipes)
+
+    except Exception as e:
+        print(f"Error in /api/chatgpt/get-recipes: {e}")
+        return jsonify({"error": str(e)}), 500
 
 def setChatgptRoutes(app):
     app.register_blueprint(chatgpt_bp)

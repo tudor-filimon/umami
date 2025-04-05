@@ -17,7 +17,7 @@ import { firestore as db } from '../firebaseConfig';
 
 type RootStackParamList = {
   Recipes: { recipeData: any };
-  // Add other screens as needed
+  Main: undefined; // Added 'Main' route to fix navigation type error
 };
 
 type RecipesScreenRouteProp = RouteProp<RootStackParamList, 'Recipes'>;
@@ -57,7 +57,6 @@ const saveRecipe = async (recipe: Recipe, uid: string) => {
     throw error;
   }
 };
-
 
 type Recipe = {
   id: number;
