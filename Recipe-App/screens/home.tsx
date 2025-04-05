@@ -40,8 +40,9 @@ type Comment = {
 
 type Post = {
   id: string;
+  userId: string;
   userName: string;
-  imageUrl: string; // Single image URL
+  imageUrl: string;
   imageUrls?: string[]; // Optional array of image URLs
   caption: string;
   hashtags: string[];
@@ -564,6 +565,7 @@ const HomeScreen = () => {
       const postsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
+        userId: doc.data().userId || auth.currentUser?.uid // Ensure userId is set
       })) as Post[];
       setPosts(postsData);
     } catch (error) {
@@ -580,6 +582,7 @@ const HomeScreen = () => {
       const postsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
+        userId: doc.data().userId || auth.currentUser?.uid // Ensure userId is set
       })) as Post[];
       setPosts(postsData);
     });
