@@ -393,7 +393,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
       </View>
 
       {/* Image */}
-      <View style={styles.imageContainer}>
+      {/* <View style={styles.imageContainer}>
         <Image
           source={{
             uri:
@@ -432,7 +432,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
               </View>
             </>
           )}
-      </View>
+      </View> // HERE  */}
       <View style={styles.imageContainer}>
         <Image
           source={{
