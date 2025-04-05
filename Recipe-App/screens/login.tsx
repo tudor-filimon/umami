@@ -59,7 +59,7 @@ const LoginScreen = () => {
           <Ionicons
             name={email.length > 0 ? "person" : "person-outline"}
             size={20}
-            color="#000831"
+            color="#C4A381"
             style={styles.icon}
           />
           <TextInput
@@ -76,7 +76,7 @@ const LoginScreen = () => {
           <Ionicons
             name={password.length > 0 ? "key" : "key-outline"}
             size={20}
-            color="#000831"
+            color="#C4A381"
             style={styles.icon}
           />
           <TextInput
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   headerContainer: {
-    backgroundColor: "#000831",
+    backgroundColor: "#C4A381",
     paddingTop: 60,
     paddingBottom: 30,
     borderBottomLeftRadius: 30,
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   loginButton: {
-    backgroundColor: "#000831",
+    backgroundColor: "#C4A381",
     height: 50,
     borderRadius: 10,
     justifyContent: "center",
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   signupLink: {
-    color: "#000831",
+    color: "#C4A381",
     fontSize: 14,
     fontWeight: "600",
   },

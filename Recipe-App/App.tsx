@@ -141,6 +141,7 @@ function MainTabs() {
           ),
         }}
       />
+      
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
@@ -156,6 +157,7 @@ function MainTabs() {
           ),
         }}
       />
+      
     </Tab.Navigator>
   );
 }

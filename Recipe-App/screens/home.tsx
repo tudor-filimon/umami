@@ -31,6 +31,7 @@ import {
 import { firestore, auth } from "../firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 
+import EmailLogger from "../components/CallWidget";
 type Comment = {
   id: string;
   username: string;
@@ -647,9 +648,9 @@ const HomeScreen = () => {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#000831" }}>
+    <View style={{ flex: 1, backgroundColor: "#C4A381" }}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Home</Text>
+        <Text style={styles.headerTitle}>Umami</Text>
         <TouchableOpacity 
           onPress={() => navigation.navigate('Messages')}
           style={styles.chatButton}
@@ -667,6 +668,11 @@ const HomeScreen = () => {
         {posts.map((post) => (
           <InstagramPost key={post.id} post={post} />
         ))}
+
+      <EmailLogger
+      
+      />
+
       </ScrollView>
     </View>
   );
