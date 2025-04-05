@@ -13,7 +13,12 @@ import CaptionScreen from './screens/caption';
 import EditProfileScreen from './screens/editprofile';
 import BigPostScreen from './screens/bigpost'; // Adjust the path if necessary
 import { colors } from './styles/globalStyles';
+import { useFonts } from '@expo-google-fonts/inter';
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
+import * as SplashScreen from 'expo-splash-screen';
+import { Ionicons } from '@expo/vector-icons';
 
+import EmailLogger from "./components/CallWidget";
 
 type RootStackParamList = {
   Login: undefined;
@@ -125,6 +130,7 @@ function MainTabs() {
           ),
         }}
       />
+      
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
@@ -140,6 +146,7 @@ function MainTabs() {
           ),
         }}
       />
+      
     </Tab.Navigator>
   );
 }
@@ -202,7 +209,7 @@ export default function App() {
             fontFamily: "Inter_600SemiBold",
           },
         }}
-        initialRouteName="Login"
+        initialRouteName="Main"
       >
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
         <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
