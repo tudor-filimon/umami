@@ -1,35 +1,33 @@
 import React, { useState, useEffect } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ScrollView,
-  Dimensions,
-  Alert,
-  Platform,
-  RefreshControl,
-  ActivityIndicator,
+  View,
+  Text,
+  TouchableOpacity,
+  Image,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  Alert,
+  Platform,
+  RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { Camera } from "expo-camera";
 import * as MediaLibrary from "expo-media-library";
-import { globalStyles } from "../styles/globalStyles";
 import { auth, firestore } from "../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
 import { uploadImage } from "../services/imageService";
 
 type RootStackParamList = {
-  Post: undefined;
-  Caption: { imageUri: string; userName: string };
-  // Add other screens as needed
+  Post: undefined;
+  Caption: { imageUris: string[]; userName: string };
 };
 
 type PostScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, "Post">;
+  navigation: NativeStackNavigationProp<RootStackParamList, "Post">;
 };
 
 const { width } = Dimensions.get("window");
@@ -37,399 +35,547 @@ const GRID_COLUMNS = 3;
 const GRID_ITEM_SIZE = width / GRID_COLUMNS;
 
 export default function PostScreen({ navigation }: PostScreenProps) {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [mediaItems, setMediaItems] = useState<
-    Array<{ id: string; uri: string }>
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [userName, setUserName] = useState<string>("");
-  const [uploading, setUploading] = useState(false);
+  const [selectedImages, setSelectedImages] = useState<
+    Array<{ id: string; uri: string }>
+  >([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [mediaItems, setMediaItems] = useState<
+    Array<{ id: string; uri: string }>
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [userName, setUserName] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
 
-  useEffect(() => {
-    checkAndRequestPermissions();
-    fetchUserName();
-  }, []);
+  useEffect(() => {
+    checkAndRequestPermissions();
+    fetchUserName();
+  }, []);
 
-  const fetchUserName = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) {
-      console.error("No current user found");
-      Alert.alert("Error", "Please log in to continue");
-      return;
-    }
+  const fetchUserName = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      console.error("No current user found");
+      Alert.alert("Error", "Please log in to continue");
+      return;
+    }
 
-    try {
-      const userDoc = await getDoc(doc(firestore, "users", currentUser.uid));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        console.log("User data:", userData);
-        setUserName(userData.name || currentUser.displayName || "Anonymous");
-      } else {
-        console.log("User document not found, using display name");
-        setUserName(currentUser.displayName || "Anonymous");
-      }
-    } catch (error) {
-      console.error("Error fetching user name:", error);
-      setUserName(currentUser.displayName || "Anonymous");
-    }
-  };
+    try {
+      const userDoc = await getDoc(doc(firestore, "users", currentUser.uid));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("User data:", userData);
+        setUserName(userData.name || currentUser.displayName || "Anonymous");
+      } else {
+        console.log("User document not found, using display name");
+        setUserName(currentUser.displayName || "Anonymous");
+      }
+    } catch (error) {
+      console.error("Error fetching user name:", error);
+      setUserName(currentUser.displayName || "Anonymous");
+    }
+  };
 
-  const checkAndRequestPermissions = async () => {
-    try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      setHasPermission(status === "granted");
-      if (status === "granted") {
-        await loadMediaItems();
-      } else {
-        Alert.alert(
-          "Permission needed",
-          "Please grant media library permissions to view your photos."
-        );
-      }
-    } catch (error) {
-      console.error("Error checking permissions:", error);
-      Alert.alert("Error", "Failed to check permissions. Please try again.");
-    }
-  };
+  const checkAndRequestPermissions = async () => {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      setHasPermission(status === "granted");
+      if (status === "granted") {
+        await loadMediaItems();
+      } else {
+        Alert.alert(
+          "Permission needed",
+          "Please grant media library permissions to view your photos."
+        );
+      }
+    } catch (error) {
+      console.error("Error checking permissions:", error);
+      Alert.alert("Error", "Failed to check permissions. Please try again.");
+    }
+  };
 
-  const loadMediaItems = async () => {
-    try {
-      setLoading(true);
-      const albums = await MediaLibrary.getAlbumsAsync();
-      const cameraRoll = albums.find((album) => album.title === "Camera Roll");
+  const loadMediaItems = async () => {
+    try {
+      setLoading(true);
+      const albums = await MediaLibrary.getAlbumsAsync();
+      const cameraRoll = albums.find((album) => album.title === "Camera Roll");
 
-      if (!cameraRoll) {
-        Alert.alert("Error", "Could not find camera roll");
-        return;
-      }
+      if (!cameraRoll) {
+        Alert.alert("Error", "Could not find camera roll");
+        return;
+      }
 
-      const assets = await MediaLibrary.getAssetsAsync({
-        album: cameraRoll,
-        mediaType: ["photo"],
-        sortBy: ["creationTime"],
-        first: 100, // Increased to show more photos
-      });
+      const assets = await MediaLibrary.getAssetsAsync({
+        album: cameraRoll,
+        mediaType: ["photo"],
+        sortBy: ["creationTime"],
+        first: 100, // Increased to show more photos
+      });
 
-      const items = assets.assets.map((asset) => ({
-        id: asset.id,
-        uri: asset.uri,
-      }));
+      const items = assets.assets.map((asset) => ({
+        id: asset.id,
+        uri: asset.uri,
+      }));
 
-      setMediaItems(items);
-      if (items.length > 0 && !selectedImage) {
-        setSelectedImage(items[0].uri);
-      }
-    } catch (error) {
-      console.error("Error loading media:", error);
-      Alert.alert("Error", "Failed to load photos. Please try again.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+      setMediaItems(items);
+      if (items.length > 0 && selectedImages.length === 0) {
+        setSelectedImages([items[0]]);
+        setCurrentImageIndex(0);
+      }
+    } catch (error) {
+      console.error("Error loading media:", error);
+      Alert.alert("Error", "Failed to load photos. Please try again.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
-  const onRefresh = React.useCallback(() => {
-    setRefreshing(true);
-    loadMediaItems();
-  }, []);
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    loadMediaItems();
+  }, []);
 
-  const pickMultipleImages = async () => {
-    try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const pickMultipleImages = async () => {
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Please grant camera roll permissions to select images."
-        );
-        return;
-      }
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Please grant camera roll permissions to select images."
+        );
+        return;
+      }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultipleSelection: true,
-        quality: 1,
-      });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
 
-      if (!result.canceled) {
-        const newImages = result.assets.map((asset, index) => ({
-          id: `new-${index}`,
-          uri: asset.uri,
-        }));
-        setMediaItems((prev) => [...newImages, ...prev]);
-        if (newImages.length > 0) {
-          setSelectedImage(newImages[0].uri);
-        }
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to pick images. Please try again.");
-    }
-  };
+      if (!result.canceled) {
+        const newImages = result.assets.map((asset, index) => ({
+          id: `new-${index}`,
+          uri: asset.uri,
+        }));
+        setSelectedImages((prev) => [...newImages, ...prev]);
+        if (newImages.length > 0) {
+          setCurrentImageIndex(selectedImages.length);
+        }
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to pick images. Please try again.");
+    }
+  };
 
-  const openCamera = async () => {
-    try {
-      const { status } = await Camera.requestCameraPermissionsAsync();
+  const openCamera = async () => {
+    try {
+      const { status } = await Camera.requestCameraPermissionsAsync();
 
-      if (status !== "granted") {
-        Alert.alert(
-          "Permission needed",
-          "Please grant camera permissions to take photos."
-        );
-        return;
-      }
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission needed",
+          "Please grant camera permissions to take photos."
+        );
+        return;
+      }
 
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
-      });
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+      });
 
-      if (!result.canceled) {
-        const newImage = {
-          id: `camera-${Date.now()}`,
-          uri: result.assets[0].uri,
-        };
-        setMediaItems((prev) => [newImage, ...prev]);
-        setSelectedImage(newImage.uri);
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to open camera. Please try again.");
-    }
-  };
+      if (!result.canceled) {
+        const newImage = {
+          id: `camera-${Date.now()}`,
+          uri: result.assets[0].uri,
+        };
+        setSelectedImages((prev) => [newImage, ...prev]);
+        setCurrentImageIndex(selectedImages.length);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to open camera. Please try again.");
+    }
+  };
 
-  const handleNext = async () => {
-    console.log("handleNext called with:", { selectedImage, userName });
-    
-    if (!selectedImage) {
-      Alert.alert("Error", "Please select an image to continue");
-      return;
-    }
+  const handleImageSelect = (uri: string) => {
+    if (selectedImages.length >= 5) {
+      Alert.alert(
+        "Maximum images reached",
+        "You can only select up to 5 images"
+      );
+      return;
+    }
+    const newImage = { id: Date.now().toString(), uri };
+    setSelectedImages((prev) => [...prev, newImage]);
+    setCurrentImageIndex(selectedImages.length);
+  };
 
-    if (!userName) {
-      Alert.alert("Error", "User information not found. Please try logging in again.");
-      return;
-    }
+  const handleDeleteImage = (index: number) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
+    if (currentImageIndex >= newImages.length) {
+      setCurrentImageIndex(Math.max(0, newImages.length - 1));
+    }
+  };
 
-    try {
-      setUploading(true);
-      // Upload the image to Firebase Storage
-      const imageUrl = await uploadImage(selectedImage);
-      console.log("Image uploaded successfully:", imageUrl);
-      
-      // Navigate to Caption screen with the Firebase Storage URL
-      navigation.navigate("Caption", {
-        imageUri: imageUrl,
-        userName: userName,
-      });
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      Alert.alert(
-        "Upload Failed",
-        "Failed to upload image. Please try again."
-      );
-    } finally {
-      setUploading(false);
-    }
-  };
+  const handleNextImage = () => {
+    if (currentImageIndex < selectedImages.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
 
-  if (hasPermission === null) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>Requesting permissions...</Text>
-      </View>
-    );
-  }
+  const handlePrevImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
 
-  if (hasPermission === false) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text>No access to camera roll</Text>
-      </View>
-    );
-  }
+  const handleNext = async () => {
+    if (selectedImages.length === 0) {
+      Alert.alert("Error", "Please select at least one image to continue");
+      return;
+    }
 
-  return (
-    <View style={[globalStyles.container, styles.container]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="close" size={24} color="black" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New post</Text>
-        <TouchableOpacity
-          onPress={handleNext}
-          disabled={!selectedImage || uploading}
-        >
-          {uploading ? (
-            <ActivityIndicator color="#007AFF" />
-          ) : (
-            <Text
-              style={[
-                styles.nextButton,
-                (!selectedImage || uploading) && styles.nextButtonDisabled,
-              ]}
-            >
-              Next
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
+    if (!userName) {
+      Alert.alert(
+        "Error",
+        "User information not found. Please try logging in again."
+      );
+      return;
+    }
 
-      {/* Image Preview Area */}
-      <View style={styles.previewContainer}>
-        {selectedImage ? (
-          <Image source={{ uri: selectedImage }} style={styles.previewImage} />
-        ) : (
-          <View style={styles.previewPlaceholder}>
-            <Text style={styles.previewPlaceholderText}>No image selected</Text>
-          </View>
-        )}
-      </View>
+    try {
+      setUploading(true);
+      const imageUrls = await Promise.all(
+        selectedImages.map((image) => uploadImage(image.uri))
+      );
+      navigation.navigate("Caption", {
+        imageUris: imageUrls,
+        userName: userName,
+      });
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      Alert.alert(
+        "Upload Failed",
+        "Failed to upload images. Please try again."
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
 
-      {/* Controls */}
-      <View style={styles.controls}>
-        <View style={styles.dropdownContainer}>
-          <Text style={styles.dropdownLabel}>Recents</Text>
-        </View>
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={styles.circularButton}
-            onPress={pickMultipleImages}
-          >
-            <Ionicons name="images" size={24} color="black" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.circularButton} onPress={openCamera}>
-            <Ionicons name="camera" size={24} color="black" />
-          </TouchableOpacity>
-        </View>
-      </View>
+  if (hasPermission === null) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Requesting permissions...</Text>
+      </View>
+    );
+  }
 
-      {/* Media Grid */}
-      <ScrollView
-        style={styles.gridContainer}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <Text>Loading photos...</Text>
-          </View>
-        ) : (
-          <View style={styles.grid}>
-            {mediaItems.map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={styles.gridItem}
-                onPress={() => setSelectedImage(item.uri)}
-              >
-                <Image
-                  source={{ uri: item.uri }}
-                  style={styles.gridImage}
-                  resizeMode="cover"
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </ScrollView>
-    </View>
-  );
+  if (hasPermission === false) {
+    return (
+      <View style={styles.loadingContainer}>
+                <Text>No access to camera roll</Text>
+              
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back-outline" size={28} color="#000" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>New post (Max 5)</Text>
+        <TouchableOpacity
+          onPress={handleNext}
+          disabled={selectedImages.length === 0 || uploading}
+        >
+          {uploading ? (
+            <ActivityIndicator color="#000831" />
+          ) : (
+            <Text
+              style={[
+                styles.nextButton,
+                (selectedImages.length === 0 || uploading) &&
+                  styles.nextButtonDisabled,
+              ]}
+            >
+              Next
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Image Preview */}
+        <View style={styles.previewContainer}>
+          {selectedImages.length > 0 ? (
+            <View style={styles.imageWrapper}>
+              {selectedImages[currentImageIndex] && (
+                <>
+                  <Image
+                    source={{ uri: selectedImages[currentImageIndex].uri }}
+                    style={styles.previewImage}
+                  />
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => handleDeleteImage(currentImageIndex)}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#ff0000" />
+                  </TouchableOpacity>
+                  {selectedImages.length > 1 && (
+                    <>
+                      {currentImageIndex > 0 && (
+                        <TouchableOpacity
+                          style={[styles.navButton, styles.prevButton]}
+                          onPress={handlePrevImage}
+                        >
+                          <Ionicons
+                            name="chevron-back"
+                            size={24}
+                            color="#fff"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      {currentImageIndex < selectedImages.length - 1 && (
+                        <TouchableOpacity
+                          style={[styles.navButton, styles.navButtonNext]}
+                          onPress={handleNextImage}
+                        >
+                          <Ionicons
+                            name="chevron-forward"
+                            size={24}
+                            color="#fff"
+                          />
+                        </TouchableOpacity>
+                      )}
+                      <View style={styles.imageCounter}>
+                        <Text style={styles.imageCounterText}>
+                          {currentImageIndex + 1}/{selectedImages.length}
+                        </Text>
+                      </View>
+                    </>
+                  )}
+                </>
+              )}
+            </View>
+          ) : (
+            <View style={styles.previewPlaceholder}>
+              <Text style={styles.previewPlaceholderText}>
+                No image selected
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Controls */}
+        <View style={styles.controls}>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.circularButton}
+              onPress={pickMultipleImages}
+            >
+              <Ionicons name="images" size={24} color="#000" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.circularButton}
+              onPress={openCamera}
+            >
+              <Ionicons name="camera" size={24} color="#000" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Media Grid */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text>Loading photos...</Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {mediaItems.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.gridItem}
+                onPress={() => handleImageSelect(item.uri)}
+              >
+                <Image
+                  source={{ uri: item.uri }}
+                  style={styles.gridImage}
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#FFEEB7",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  nextButton: {
-    color: "#007AFF",
-    fontSize: 17,
-    fontWeight: "600",
-  },
-  nextButtonDisabled: {
-    color: "#ccc",
-  },
-  previewContainer: {
-    width: "100%",
-    aspectRatio: 1,
-    backgroundColor: "#f0f0f0",
-  },
-  previewImage: {
-    width: "100%",
-    height: "100%",
-  },
-  previewPlaceholder: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  previewPlaceholderText: {
-    color: "#999",
-    fontSize: 16,
-  },
-  controls: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
-  },
-  dropdownContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  dropdownLabel: {
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  actionButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  circularButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#f0f0f0",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  gridContainer: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  grid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  gridItem: {
-    width: GRID_ITEM_SIZE,
-    height: GRID_ITEM_SIZE,
-    padding: 1,
-  },
-  gridImage: {
-    width: "100%",
-    height: "100%",
-  },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 50 : 20,
+    paddingBottom: 16,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#000",
+  },
+  nextButton: {
+    color: "#000831",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  nextButtonDisabled: {
+    color: "#ccc",
+  },
+  previewContainer: {
+    width: "100%",
+    aspectRatio: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    margin: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    alignSelf: "center",
+    maxWidth: 400,
+  },
+  previewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  previewPlaceholder: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8f8f8",
+  },
+  previewPlaceholderText: {
+    color: "#999",
+    fontSize: 16,
+  },
+  controls: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  circularButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#f8f8f8",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  gridItem: {
+    width: GRID_ITEM_SIZE - 2,
+    height: GRID_ITEM_SIZE - 2,
+    margin: 1,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  gridImage: {
+    width: "100%",
+    height: "100%",
+  },
+  imageWrapper: {
+    width: "100%",
+    height: "100%",
+    position: "relative",
+  },
+  deleteButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    borderRadius: 12,
+    padding: 4,
+  },
+  navButton: {
+    position: "absolute",
+    top: "50%",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  prevButton: {
+    left: 10,
+  },
+  navButtonNext: {
+    right: 10,
+  },
+  imageCounter: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+  },
 });

@@ -14,6 +14,7 @@ export type Post = {
   userId: string;
   userName: string;
   imageUrl: string;
+  imageUrls?: string[];
   caption: string;
   hashtags: string[];
   createdAt: any;
@@ -23,7 +24,7 @@ export type Post = {
 
 export const postService = {
   async createPost(
-    imageUrl: string,
+    imageUrls: string[],
     caption: string,
     hashtags: string[]
   ): Promise<void> {
@@ -44,7 +45,8 @@ export const postService = {
       const postData = {
         userId: currentUser.uid,
         userName: userName,
-        imageUrl,
+        imageUrl: imageUrls[0], // Keep the first image as the main image
+        imageUrls: imageUrls, // Store all images
         caption: caption.trim(),
         hashtags: hashtags.filter((tag) => tag.startsWith("#")),
         createdAt: serverTimestamp(),
