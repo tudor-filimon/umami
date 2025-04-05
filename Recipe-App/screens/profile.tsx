@@ -44,19 +44,12 @@ type RootStackParamList = {
   Caption: { imageUri: string };
   BigPost: { posts: DocumentData[]; initialIndex: number };
   BigRecipe: { recipe: DocumentData };
-  BigRecipe: { recipe: DocumentData };
 };
 
 const screenWidth = Dimensions.get('window').width;
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [userInfo, setUserInfo] = useState<UserInfo>({
-    name: '',
-    pronouns: '',
-    followersCount: 0,
-    followingCount: 0,
-  });
   const [userInfo, setUserInfo] = useState<UserInfo>({
     name: '',
     pronouns: '',
@@ -174,7 +167,6 @@ const ProfileScreen: React.FC = () => {
           } catch (error) {
             Alert.alert('Error', 'Logout failed.');
           }
-        },
         },
       },
     ]);
@@ -454,10 +446,6 @@ const ProfileScreen: React.FC = () => {
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save Changes</Text>
               )}
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setShowEditProfile(false)}
-              style={{ marginTop: 10, alignItems: 'center' }}
-            >
             <TouchableOpacity
               onPress={() => setShowEditProfile(false)}
               style={{ marginTop: 10, alignItems: 'center' }}
