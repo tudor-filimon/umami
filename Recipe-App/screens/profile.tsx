@@ -44,12 +44,19 @@ type RootStackParamList = {
   Caption: { imageUri: string };
   BigPost: { posts: DocumentData[]; initialIndex: number };
   BigRecipe: { recipe: DocumentData };
+  BigRecipe: { recipe: DocumentData };
 };
 
 const screenWidth = Dimensions.get('window').width;
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [userInfo, setUserInfo] = useState<UserInfo>({
+    name: '',
+    pronouns: '',
+    followersCount: 0,
+    followingCount: 0,
+  });
   const [userInfo, setUserInfo] = useState<UserInfo>({
     name: '',
     pronouns: '',
@@ -117,9 +124,9 @@ const ProfileScreen: React.FC = () => {
         );
         const querySnapshot = await getDocs(q);
         const userPosts = querySnapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() } as { id: string; imageUrl: string; createdAt: number }))
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
           .filter((post) => !!post.imageUrl)
-          .sort((a, b) => b.createdAt - a.createdAt);
+          .sort((a, b) => b.createdAt - a.createdAt); // sort by createdAt desc
         setPosts(userPosts);
       } catch (error) {
         console.error('Error fetching user posts:', error);
@@ -138,8 +145,8 @@ const ProfileScreen: React.FC = () => {
       );
       const snapshot = await getDocs(q);
       const userRecipes = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() } as { id: string; name: string }))
-        .filter((recipe) => !!recipe.name);
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((recipe) => !!recipe.name); // or whatever condition is necessary
       setSavedRecipes(userRecipes);
     } catch (error) {
       console.error('Error fetching user recipes:', error);
@@ -167,6 +174,7 @@ const ProfileScreen: React.FC = () => {
           } catch (error) {
             Alert.alert('Error', 'Logout failed.');
           }
+        },
         },
       },
     ]);
@@ -446,6 +454,10 @@ const ProfileScreen: React.FC = () => {
                 <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save Changes</Text>
               )}
             </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowEditProfile(false)}
+              style={{ marginTop: 10, alignItems: 'center' }}
+            >
             <TouchableOpacity
               onPress={() => setShowEditProfile(false)}
               style={{ marginTop: 10, alignItems: 'center' }}
