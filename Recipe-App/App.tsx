@@ -227,6 +227,11 @@ export default function App() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
+            name="BigRecipe"
+            component={BigRecipeScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="SignUp"
             component={SignUpScreen}
             options={{ headerShown: false }}
@@ -261,8 +266,6 @@ export default function App() {
             }}
           />
           <Stack.Screen name="Recipes" component={Recipes} options={{ headerShown: false }} />
-          <Stack.Screen name="BigRecipe" component={BigRecipeScreen} options={{ headerShown: false,
-          }} />
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>
