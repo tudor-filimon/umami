@@ -1,40 +1,40 @@
-import * as React from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { createStackNavigator } from "@react-navigation/stack";
-import { Image } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Image } from 'react-native';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { Ionicons } from '@expo/vector-icons';
 import {
-  useFonts,
   Inter_400Regular,
   Inter_500Medium,
   Inter_600SemiBold,
   Inter_700Bold,
-} from "@expo-google-fonts/inter";
-import * as SplashScreen from "expo-splash-screen";
-import HomeScreen from "./screens/home";
-import GenerateScreen from "./screens/generate";
-import PostScreen from "./screens/post";
-import ProfileScreen from "./screens/profile";
-import LoginScreen from "./screens/login";
-import SignUpScreen from "./screens/signup";
-import CaptionScreen from "./screens/caption";
-import EditProfileScreen from "./screens/editprofile";
-import BigPostScreen from "./screens/bigpost"; // Adjust the path if necessary
-import { colors } from "./styles/globalStyles";
-import BigRecipeScreen from "./screens/bigrecipes"; // Adjust the path if necessary
+} from '@expo-google-fonts/inter';
+import LoginScreen from './screens/login';
+import SignUpScreen from './screens/signup';
+import CaptionScreen from './screens/caption';
+import EditProfileScreen from './screens/editprofile';
+import BigPostScreen from './screens/bigpost'; // Adjust the path if necessary
+import BigRecipeScreen from './screens/bigrecipes'; // Adjust the path if necessary
+import { colors } from './styles/globalStyles';
+import HomeScreen from './screens/home';
+import GenerateScreen from './screens/generate';
+import PostScreen from './screens/post';
+import ProfileScreen from './screens/profile';
+import MessagesScreen from './screens/messages';
 
-type RootStackParamList = {
+export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined;
-  Caption: { imageUris: string[]; userName: string };
-  EditProfile: undefined;
-  BigPost: undefined;
+  Caption: { imageUri: string };
+  Messages: undefined;
 };
 
 const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function MainTabs() {
   return (
@@ -206,7 +206,6 @@ export default function App() {
     >
       <Stack.Navigator
         screenOptions={{
-          cardStyle: { backgroundColor: colors.background },
           headerStyle: { backgroundColor: colors.navBar },
           headerTintColor: colors.text,
           headerTitleStyle: {
@@ -247,9 +246,13 @@ export default function App() {
             headerShown: false,
           }}
         />
-        <Stack.Screen name="BigRecipe" component={BigRecipeScreen} options={{ headerShown: false,
-}} />
-
+        <Stack.Screen 
+          name="Messages" 
+          component={MessagesScreen} 
+          options={{
+            headerShown: false
+          }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );
