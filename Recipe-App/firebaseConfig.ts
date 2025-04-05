@@ -3,6 +3,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
+import { getDatabase } from "firebase/database";
 
 
 
@@ -32,4 +33,7 @@ const firestore = getFirestore(app);
 // Initialize Firebase Storage and get a reference to the service
 const storage = getStorage(app);
 
-export { auth, firestore, storage };
+const database = getDatabase(app);  // realtime database lmao
+
+
+export { auth, firestore, storage, database };

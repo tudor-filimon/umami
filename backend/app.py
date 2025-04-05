@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from routes.vision_routes import setVisionRoutes
 from routes.chatgpt_routes import setChatgptRoutes  # Import the function
 from routes.recipe_routes import setRecipeRoutes
+from routes.video_room_routes import setVideoRoomRoutes
+
 from routes.image_routes import setImageGenRoutes
 
 # Load environment variables from .env file
@@ -17,6 +19,7 @@ CORS(app)
 setRecipeRoutes(app)
 setVisionRoutes(app)
 setChatgptRoutes(app)  # Use the function
+setVideoRoomRoutes(app)
 setImageGenRoutes(app)
 
 if __name__ == '__main__':

@@ -31,6 +31,7 @@ import {
 import { firestore, auth } from "../firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
 
+import EmailLogger from "../components/CallWidget";
 type Comment = {
   id: string;
   username: string;
@@ -667,6 +668,11 @@ const HomeScreen = () => {
         {posts.map((post) => (
           <InstagramPost key={post.id} post={post} />
         ))}
+
+      <EmailLogger
+      
+      />
+
       </ScrollView>
     </View>
   );
