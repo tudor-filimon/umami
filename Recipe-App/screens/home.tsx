@@ -647,9 +647,9 @@ const HomeScreen = () => {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#000831" }}>
+    <View style={{ flex: 1, backgroundColor: "#FFEEB7" }}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Home</Text>
+        {/* <Text style={styles.headerTitle}>Home</Text> */}
         <TouchableOpacity 
           onPress={() => navigation.navigate('Messages')}
           style={styles.chatButton}
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   hashtag: {
-    color: "#003569",
+    color: "#000000", // Changed to black for visibility against #FFEEB7 background
     marginRight: 4,
   },
   commentsSection: {
@@ -1053,7 +1053,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#fff',
+    color: '#000000',
   },
   chatButton: {
     padding: 8,
