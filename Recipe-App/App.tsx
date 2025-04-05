@@ -1,45 +1,45 @@
-import * as React from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
 import { Image } from 'react-native';
-import HomeScreen from './screens/home';
-import GenerateScreen from './screens/generate';
-import PostScreen from './screens/post';
-import ProfileScreen from './screens/profile';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import LoginScreen from './screens/login';
 import SignUpScreen from './screens/signup';
 import CaptionScreen from './screens/caption';
 import EditProfileScreen from './screens/editprofile';
 import BigPostScreen from './screens/bigpost'; // Adjust the path if necessary
 import BigRecipeScreen from './screens/bigrecipes'; // Adjust the path if necessary
+import Recipes from './screens/recipes'; // Adjust the path if necessary
 import { colors } from './styles/globalStyles';
-import * as SplashScreen from 'expo-splash-screen';
-import { Ionicons } from '@expo/vector-icons';
-import 'react-native-reanimated';
+import HomeScreen from './screens/home';
+import GenerateScreen from './screens/generate';
+import PostScreen from './screens/post';
+import ProfileScreen from './screens/profile';
+import MessagesScreen from './screens/messages';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-
-import Recipes from './screens/recipes'
-
-import {
-  useFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from "@expo-google-fonts/inter";
-
-type RootStackParamList = {
+export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined;
+  Messages: undefined;
   Caption: { imageUris: string[]; userName: string };
   EditProfile: undefined;
   BigPost: undefined;
+  Recipes: { recipeData: object[] }
 };
 
 const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function MainTabs() {
   return (
@@ -178,85 +178,93 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer
-      theme={{
-        dark: false,
-        colors: {
-          primary: colors.text,
-          background: colors.background,
-          card: colors.navBar,
-          text: colors.text,
-          border: colors.text + "20",
-          notification: colors.text,
-        },
-        fonts: {
-          regular: {
-            fontFamily: "Inter_400Regular",
-            fontWeight: "400",
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer
+        theme={{
+          dark: false,
+          colors: {
+            primary: colors.text,
+            background: colors.background,
+            card: colors.navBar,
+            text: colors.text,
+            border: colors.text + "20",
+            notification: colors.text,
           },
-          medium: {
-            fontFamily: "Inter_500Medium",
-            fontWeight: "500",
-          },
-          bold: {
-            fontFamily: "Inter_700Bold",
-            fontWeight: "700",
-          },
-          heavy: {
-            fontFamily: "Inter_700Bold",
-            fontWeight: "900",
-          },
-        },
-      }}
-    >
-      <Stack.Navigator
-        screenOptions={{
-          cardStyle: { backgroundColor: colors.background },
-          headerStyle: { backgroundColor: colors.navBar },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            fontFamily: "Inter_600SemiBold",
+          fonts: {
+            regular: {
+              fontFamily: "Inter_400Regular",
+              fontWeight: "400",
+            },
+            medium: {
+              fontFamily: "Inter_500Medium",
+              fontWeight: "500",
+            },
+            bold: {
+              fontFamily: "Inter_700Bold",
+              fontWeight: "700",
+            },
+            heavy: {
+              fontFamily: "Inter_700Bold",
+              fontWeight: "900",
+            },
           },
         }}
-        initialRouteName="Login"
       >
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="SignUp"
-          component={SignUpScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Main"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="EditProfile"
-          component={EditProfileScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="BigPost"
-          component={BigPostScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Caption"
-          component={CaptionScreen}
-          options={{
-            headerShown: false,
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.navBar },
+            headerTintColor: colors.text,
+            headerTitleStyle: {
+              fontFamily: "Inter_600SemiBold",
+            },
+            gestureEnabled: false, // Disable swipe-to-go-back gesture
           }}
-        />
-        <Stack.Screen name="Recipes" component={Recipes} options={{ headerShown: false }} />
-        <Stack.Screen name="BigRecipe" component={BigRecipeScreen} options={{ headerShown: false,
-}} />
-
-      </Stack.Navigator>
-    </NavigationContainer>
+          initialRouteName="Login"
+        >
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SignUp"
+            component={SignUpScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Main"
+            component={MainTabs}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="BigPost"
+            component={BigPostScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Caption"
+            component={CaptionScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen 
+            name="Messages" 
+            component={MessagesScreen} 
+            options={{
+              headerShown: false
+            }}
+          />
+          <Stack.Screen name="Recipes" component={Recipes} options={{ headerShown: false }} />
+          <Stack.Screen name="BigRecipe" component={BigRecipeScreen} options={{ headerShown: false,
+          }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }
