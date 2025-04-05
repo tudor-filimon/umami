@@ -1,9 +1,15 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  background: '#FFEEB7',
-  text: '#644536',
-  navBar: '#FFE682',
+  background: '#FFFFFF',
+  text: '#000000',
+  navBar: '#F5F5F5',
+  primary: '#007AFF',
+  primaryLight: '#E6F2FF',
+  secondary: '#F0F0F0',
+  textSecondary: '#666666',
+  border: '#E0E0E0',
+  white: '#FFFFFF',
 };
 
 export const globalStyles = StyleSheet.create({

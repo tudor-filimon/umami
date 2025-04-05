@@ -10,6 +10,7 @@ import {
   TextInput,
   Keyboard,
   Alert,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -23,18 +24,12 @@ import {
   arrayUnion,
   Timestamp,
   getDoc,
-  increment,
   deleteDoc,
-  setDoc,
   addDoc,
-  where,
   serverTimestamp,
 } from "firebase/firestore";
 import { firestore, auth } from "../firebaseConfig";
 import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../App";
-import { colors } from "../styles/globalStyles";
 
 type Comment = {
   id: string;
@@ -46,14 +41,20 @@ type Comment = {
 type Post = {
   id: string;
   userName: string;
-  imageUrl: string;
+  imageUrl: string; // Single image URL
+  imageUrls?: string[]; // Optional array of image URLs
   caption: string;
   hashtags: string[];
   createdAt: any;
   likes: number;
   likedBy: string[];
   comments: Comment[];
-  userId: string;
+};
+
+type UserData = {
+  id: string;
+  name: string;
+  profileImage?: string;
 };
 
 const InstagramPost = ({ post }: { post: Post }) => {
@@ -62,32 +63,23 @@ const InstagramPost = ({ post }: { post: Post }) => {
   const [showComments, setShowComments] = useState(false);
   const [showAllComments, setShowAllComments] = useState(false);
   const [showLikesOverlay, setShowLikesOverlay] = useState(false);
+  const [isBookmarked, setIsBookmarked] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<Comment[]>(post.comments || []);
   const [userName, setUserName] = useState<string>("");
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showDeleteOverlay, setShowDeleteOverlay] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showShareOverlay, setShowShareOverlay] = useState(false);
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigation = useNavigation();
 
   useEffect(() => {
-    const user = auth.currentUser;
-    if (user) {
-      setCurrentUserId(user.uid);
-      console.log("Setting current user ID:", user.uid);
-    }
-  }, []);
-
-  useEffect(() => {
-    console.log("Post data:", post);
-    console.log("Current user ID:", currentUserId);
-    console.log("Post user ID:", post.userId);
-    console.log("Should show follow button:", currentUserId && currentUserId !== post.userId);
-    
     fetchUserName();
-    checkIfFollowing();
-    setIsLiked(currentUserId ? post.likedBy?.includes(currentUserId) || false : false);
+    // Initialize like status and count from post data
+    setIsLiked(post.likedBy?.includes(userName) || false);
     setLikesCount(post.likes || 0);
-  }, [post, currentUserId]);
+  }, [post]);
 
   const fetchUserName = async () => {
     const currentUser = auth.currentUser;
@@ -95,7 +87,10 @@ const InstagramPost = ({ post }: { post: Post }) => {
       try {
         const userDoc = await getDoc(doc(firestore, "users", currentUser.uid));
         if (userDoc.exists()) {
-          setUserName(userDoc.data().name);
+          const name = userDoc.data().name;
+          setUserName(name);
+          // Update like status after getting username
+          setIsLiked(post.likedBy?.includes(name) || false);
         }
       } catch (error) {
         console.error("Error fetching user name:", error);
@@ -103,105 +98,21 @@ const InstagramPost = ({ post }: { post: Post }) => {
     }
   };
 
-  const checkIfFollowing = async () => {
-    if (!currentUserId || currentUserId === post.userId) {
-      console.log('Skipping follow check:', { currentUserId, postUserId: post.userId });
+  const handleLike = async () => {
+    if (!userName) {
+      Alert.alert("Error", "Please wait while we load your information");
       return;
     }
 
     try {
-      console.log('Checking follow status for:', { currentUserId, postUserId: post.userId });
-      const followsRef = collection(firestore, 'follows');
-      const q = query(
-        followsRef,
-        where('followerId', '==', currentUserId),
-        where('followingId', '==', post.userId)
-      );
-      const querySnapshot = await getDocs(q);
-      const isFollowing = !querySnapshot.empty;
-      setIsFollowing(isFollowing);
-      console.log('Follow status result:', {
-        currentUserId,
-        postUserId: post.userId,
-        isFollowing,
-        querySize: querySnapshot.size
-      });
-    } catch (error) {
-      console.error('Error checking follow status:', error);
-      // Don't set isFollowing to false on error, keep the current state
-    }
-  };
-
-  const handleFollow = async () => {
-    if (!currentUserId || currentUserId === post.userId || isLoading) return;
-
-    setIsLoading(true);
-    try {
-      const followsRef = collection(firestore, 'follows');
-      const q = query(
-        followsRef,
-        where('followerId', '==', currentUserId),
-        where('followingId', '==', post.userId)
-      );
-      const querySnapshot = await getDocs(q);
-
-      // Get both user document references
-      const followedUserRef = doc(firestore, 'users', post.userId);
-      const currentUserRef = doc(firestore, 'users', currentUserId);
-
-      if (querySnapshot.empty) {
-        // Follow
-        await addDoc(followsRef, {
-          followerId: currentUserId,
-          followingId: post.userId,
-          createdAt: serverTimestamp()
-        });
-        
-        // Update follower count for the followed user
-        await updateDoc(followedUserRef, {
-          followersCount: increment(1)
-        });
-        
-        // Update following count for the current user
-        await updateDoc(currentUserRef, {
-          followingCount: increment(1)
-        });
-        
-        setIsFollowing(true);
-      } else {
-        // Unfollow
-        await deleteDoc(querySnapshot.docs[0].ref);
-        
-        // Update follower count for the followed user
-        await updateDoc(followedUserRef, {
-          followersCount: increment(-1)
-        });
-        
-        // Update following count for the current user
-        await updateDoc(currentUserRef, {
-          followingCount: increment(-1)
-        });
-        
-        setIsFollowing(false);
-      }
-    } catch (error) {
-      console.error('Error following/unfollowing:', error);
-      Alert.alert('Error', 'Failed to update follow status');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleLike = async () => {
-    try {
       const postRef = doc(firestore, "posts", post.id);
       const newLikeStatus = !isLiked;
       const likeDelta = newLikeStatus ? 1 : -1;
-      const newLikesCount = Math.max(0, likesCount + likeDelta); // Ensure likes don't go below 0
+      const newLikesCount = Math.max(0, likesCount + likeDelta);
 
       const updatedLikedBy = newLikeStatus
-        ? [...(post.likedBy || []), currentUserId]
-        : (post.likedBy || []).filter((id) => id !== currentUserId);
+        ? [...(post.likedBy || []), userName]
+        : (post.likedBy || []).filter((id) => id !== userName);
 
       await updateDoc(postRef, {
         likes: newLikesCount,
@@ -220,24 +131,16 @@ const InstagramPost = ({ post }: { post: Post }) => {
     if (!newComment.trim()) return;
 
     const currentUser = auth.currentUser;
-    if (!currentUser) {
+    if (!currentUser || !userName) {
       Alert.alert("Error", "You must be logged in to comment");
       return;
     }
 
     try {
-      // Get the current user's name from Firestore
-      const userDoc = await getDoc(doc(firestore, "users", currentUser.uid));
-      if (!userDoc.exists()) {
-        Alert.alert("Error", "User profile not found");
-        return;
-      }
-
-      const userProfile = userDoc.data();
       const postRef = doc(firestore, "posts", post.id);
       const newCommentObj: Comment = {
         id: Date.now().toString(),
-        username: userProfile.name, // Use the actual user's name from their profile
+        username: userName,
         text: newComment.trim(),
         createdAt: Timestamp.now(),
       };
@@ -279,6 +182,26 @@ const InstagramPost = ({ post }: { post: Post }) => {
   const displayedComments = showAllComments ? comments : comments.slice(0, 10);
   const hasMoreComments = comments.length > 10;
 
+  const handleNextImage = () => {
+    if (
+      post.imageUrls &&
+      Array.isArray(post.imageUrls) &&
+      currentImageIndex < post.imageUrls.length - 1
+    ) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (
+      post.imageUrls &&
+      Array.isArray(post.imageUrls) &&
+      currentImageIndex > 0
+    ) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
   const LikesOverlay = () => (
     <View style={styles.overlay}>
       <View style={styles.likesModal}>
@@ -303,7 +226,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
                 <Text style={styles.likeUsername}>{username}</Text>
               </View>
             ))}
-          {(!post.likedBy || post.likedBy.length === 0) && (
+          {(post.likedBy.length === 0) && (
             <View style={styles.emptyLikes}>
               <Text style={styles.emptyLikesText}>No likes yet</Text>
             </View>
@@ -313,74 +236,264 @@ const InstagramPost = ({ post }: { post: Post }) => {
     </View>
   );
 
+  // Handle post deletion
+  const handleDeletePost = async () => {
+    try {
+      await deleteDoc(doc(firestore, "posts", post.id));
+      Alert.alert("Success", "Post deleted successfully");
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      Alert.alert("Error", "Failed to delete post. Please try again.");
+    }
+    setShowDeleteOverlay(false);
+  };
+
+  // Delete confirmation overlay component
+  const DeleteOverlay = () => (
+    <View style={styles.overlay}>
+      <View style={styles.deleteModal}>
+        <Text style={styles.deleteTitle}>Delete Post?</Text>
+        <Text style={styles.deleteMessage}>
+          Are you sure you want to delete this post?
+        </Text>
+        <View style={styles.deleteButtons}>
+          <TouchableOpacity
+            style={[styles.deleteButton, styles.cancelButton]}
+            onPress={() => setShowDeleteOverlay(false)}
+          >
+            <Text style={styles.cancelButtonText}>No</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.deleteButton, styles.confirmButton]}
+            onPress={handleDeletePost}
+          >
+            <Text style={styles.confirmButtonText}>Yes</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
+  // Add this function to fetch users
+  const fetchUsers = async () => {
+    try {
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef);
+      const querySnapshot = await getDocs(q);
+      const usersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserData[];
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  // Add this function to handle sharing
+  const handleShare = async (post: Post, receiverId: string) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      // Create a message with the post details
+      const messageData = {
+        text: `Shared a post: ${post.caption}`,
+        senderId: currentUser.uid,
+        receiverId: receiverId,
+        timestamp: serverTimestamp(),
+        participants: [currentUser.uid, receiverId],
+        read: false,
+        postId: post.id, // Store the post ID
+        postImage: post.imageUrl, // Store the post image URL
+        postCaption: post.caption, // Store the post caption
+        type: 'post' // Indicate this is a post share
+      };
+
+      // Add the message to the messages collection
+      await addDoc(collection(firestore, 'messages'), messageData);
+
+      // Close the share overlay
+      setShowShareOverlay(false);
+      Alert.alert('Success', 'Post shared successfully!');
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      Alert.alert('Error', 'Failed to share post');
+    }
+  };
+
+  // Add this component for the share overlay
+  const ShareOverlay = () => (
+    <View style={styles.overlay}>
+      <View style={styles.shareModal}>
+        <View style={styles.shareHeader}>
+          <Text style={styles.shareTitle}>Share with</Text>
+          <TouchableOpacity onPress={() => setShowShareOverlay(false)} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search users..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <ScrollView style={styles.usersList}>
+          {users
+            .filter(user => 
+              user.id !== auth.currentUser?.uid &&
+              user.name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            .map(user => (
+              <TouchableOpacity
+                key={user.id}
+                style={styles.userItem}
+                onPress={() => handleShare(post, user.id)}
+              >
+                <Image
+                  source={{ uri: user.profileImage || 'https://via.placeholder.com/40' }}
+                  style={styles.userImage}
+                />
+                <Text style={styles.userName}>{user.name}</Text>
+              </TouchableOpacity>
+            ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.card}>
       {showLikesOverlay && <LikesOverlay />}
+      {showDeleteOverlay && <DeleteOverlay />}
+      {showShareOverlay && <ShareOverlay />}
 
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
-          <Image
-            source={{ uri: "https://via.placeholder.com/32" }}
-            style={styles.profilePic}
-          />
-          <View style={styles.userNameContainer}>
-            <Text style={styles.username}>{post.userName}</Text>
-            {currentUserId && currentUserId !== post.userId && (
-              <TouchableOpacity 
-                onPress={handleFollow}
-                disabled={isLoading}
-                style={[styles.followButton, isFollowing && styles.followingButton]}
-              >
-                <Text style={[styles.followButtonText, isFollowing && styles.followingButtonText]}>
-                  {isLoading ? '...' : isFollowing ? 'Following' : 'Follow'}
-                </Text>
-              </TouchableOpacity>
-            )}
+          <View style={styles.profilePicContainer}>
+            <Image
+              source={{ uri: "https://via.placeholder.com/32" }}
+              style={styles.profilePic}
+            />
           </View>
+          <Text style={styles.username}>{post.userName}</Text>
         </View>
-        <Ionicons name="ellipsis-horizontal" size={24} color="black" />
+        {userName === post.userName && (
+          <TouchableOpacity onPress={() => setShowDeleteOverlay(true)}>
+            <Ionicons name="ellipsis-horizontal" size={20} color="#262626" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Image */}
-      <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
+      <View style={styles.imageContainer}>
+        <Image
+          source={{
+            uri:
+              post.imageUrls &&
+              Array.isArray(post.imageUrls) &&
+              post.imageUrls.length > 0
+                ? post.imageUrls[currentImageIndex]
+                : post.imageUrl,
+          }}
+          style={styles.postImage}
+        />
+        {post.imageUrls &&
+          Array.isArray(post.imageUrls) &&
+          post.imageUrls.length > 1 && (
+            <>
+              {currentImageIndex > 0 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.prevButton]}
+                  onPress={handlePrevImage}
+                >
+                  <Ionicons name="chevron-back" size={24} color="#fff" />
+                </TouchableOpacity>
+              )}
+              {currentImageIndex < post.imageUrls.length - 1 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.navButtonNext]}
+                  onPress={handleNextImage}
+                >
+                  <Ionicons name="chevron-forward" size={24} color="#fff" />
+                </TouchableOpacity>
+              )}
+              <View style={styles.imageCounter}>
+                <Text style={styles.imageCounterText}>
+                  {currentImageIndex + 1}/{post.imageUrls.length}
+                </Text>
+              </View>
+            </>
+          )}
+      </View>
 
       {/* Actions */}
       <View style={styles.actions}>
         <View style={styles.leftActions}>
-          <TouchableOpacity onPress={handleLike}>
+          <TouchableOpacity onPress={handleLike} style={styles.actionButton}>
             <Ionicons
               name={isLiked ? "heart" : "heart-outline"}
               size={24}
-              color={isLiked ? "#FF3B30" : "black"}
+              color={isLiked ? "#FF3B30" : "#262626"}
             />
           </TouchableOpacity>
           <TouchableOpacity
-            style={styles.actionIcon}
+            style={[styles.actionButton, styles.actionIcon]}
             onPress={() => setShowComments(!showComments)}
           >
-            <Ionicons name="chatbubble-outline" size={24} color="black" />
+            <Ionicons
+              name={showComments ? "chatbubble" : "chatbubble-outline"}
+              size={22}
+              color="#262626"
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionIcon]}
+            onPress={() => {
+              fetchUsers();
+              setShowShareOverlay(true);
+            }}
+          >
+            <Ionicons name="paper-plane-outline" size={22} color="#262626" />
           </TouchableOpacity>
         </View>
-        <Ionicons name="bookmark-outline" size={24} color="black" />
+        <TouchableOpacity
+          style={styles.actionButton}
+          onPress={() => setIsBookmarked(!isBookmarked)}
+        >
+          <Ionicons
+            name={isBookmarked ? "bookmark" : "bookmark-outline"}
+            size={24}
+            color="#262626"
+          />
+        </TouchableOpacity>
       </View>
 
       {/* Likes */}
-      <TouchableOpacity onPress={() => setShowLikesOverlay(true)}>
+      <TouchableOpacity
+        onPress={() => setShowLikesOverlay(true)}
+        style={styles.likesContainer}
+      >
         <Text style={styles.likes}>{likesCount} likes</Text>
       </TouchableOpacity>
 
       {/* Caption */}
       <View style={styles.caption}>
         <Text style={styles.captionText}>
-          <Text style={styles.username}>{post.userName}</Text> {post.caption}
+          <Text style={styles.username}>{post.userName}</Text>{" "}
+          <Text style={styles.captionContent}>{post.caption}</Text>
+        </Text>
+        <View style={styles.hashtagContainer}>
           {post.hashtags.map((tag, index) => (
             <Text key={index} style={styles.hashtag}>
-              {" "}
               {tag}
             </Text>
           ))}
-        </Text>
+        </View>
       </View>
 
       {/* Comments Section */}
@@ -398,7 +511,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
                     onPress={() => handleDeleteComment(comment.id)}
                     style={styles.deleteButton}
                   >
-                    <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                    <Ionicons name="trash-outline" size={20} color="#FF3B30" />
                   </TouchableOpacity>
                 )}
               </View>
@@ -409,7 +522,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
                 onPress={() => setShowAllComments(true)}
               >
                 <Text style={styles.seeMoreText}>
-                  See all {comments.length} comments
+                  View all {comments.length} comments
                 </Text>
               </TouchableOpacity>
             )}
@@ -422,6 +535,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
               value={newComment}
               onChangeText={setNewComment}
               multiline
+              placeholderTextColor="#8e8e8e"
             />
             <TouchableOpacity
               style={styles.postCommentButton}
@@ -436,10 +550,10 @@ const InstagramPost = ({ post }: { post: Post }) => {
   );
 };
 
-const HomeScreen: React.FC = () => {
+const HomeScreen = () => {
+  const navigation = useNavigation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const fetchPosts = async () => {
     try {
@@ -447,19 +561,10 @@ const HomeScreen: React.FC = () => {
       const q = query(postsRef, orderBy("createdAt", "desc"));
 
       const snapshot = await getDocs(q);
-      const postsData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        console.log("Post data from Firestore:", {
-          id: doc.id,
-          userId: data.userId,
-          userName: data.userName,
-          likedBy: data.likedBy || []
-        });
-        return {
-          id: doc.id,
-          ...data,
-        };
-      }) as Post[];
+      const postsData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Post[];
       setPosts(postsData);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -489,7 +594,16 @@ const HomeScreen: React.FC = () => {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#FFEEB7" }}>
+    <View style={{ flex: 1, backgroundColor: "#000831" }}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Home</Text>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Messages')}
+          style={styles.chatButton}
+        >
+          <Ionicons name="chatbubble-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
       <ScrollView
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={true}
@@ -497,15 +611,6 @@ const HomeScreen: React.FC = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Home</Text>
-          <TouchableOpacity 
-            onPress={() => navigation.navigate('Messages')}
-            style={styles.messagesButton}
-          >
-            <Ionicons name="chatbubble-outline" size={24} color={colors.text} />
-          </TouchableOpacity>
-        </View>
         {posts.map((post) => (
           <InstagramPost key={post.id} post={post} />
         ))}
@@ -518,165 +623,208 @@ const styles = StyleSheet.create({
   scrollViewContent: {
     paddingVertical: 12,
     paddingBottom: 80,
-    paddingHorizontal: 0,
-  },
-  flatList: {
-    flex: 1,
-    backgroundColor: "#FFEEB7",
-  },
-  listContainer: {
-    paddingVertical: 8,
+    paddingHorizontal: 8,
   },
   card: {
-    width: "95%",
+    width: "96%",
+    backgroundColor: "#ffffff",
+    marginBottom: 12,
+    borderRadius: 12,
     alignSelf: "center",
-    backgroundColor: "#FFEEB7",
-    borderRadius: 8,
-    overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    marginVertical: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 20,
+    padding: 16,
+    paddingTop: Platform.OS === 'ios' ? 50 : 30,
+    backgroundColor: '#000831',
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
   },
-  messagesButton: {
+  chatButton: {
     padding: 8,
   },
   userInfo: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
   },
-  userNameContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginLeft: 8,
-    flex: 1,
-    justifyContent: "space-between",
-  },
-  profilePic: {
+  profilePicContainer: {
     width: 32,
     height: 32,
     borderRadius: 16,
+    marginRight: 10,
+    backgroundColor: "#f0f0f0",
+  },
+  profilePic: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 16,
   },
   username: {
-    fontWeight: "600",
-    marginRight: 8,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    color: "#262626",
+  },
+  imageContainer: {
+    width: "100%",
+    position: "relative",
   },
   postImage: {
     width: "100%",
-    height: 450,
+    height: undefined,
+    aspectRatio: 1,
   },
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
     padding: 12,
-    backgroundColor: "#FFEEB7",
+    paddingHorizontal: 14,
   },
   leftActions: {
     flexDirection: "row",
+    alignItems: "center",
+  },
+  actionButton: {
+    padding: 4,
   },
   actionIcon: {
     marginLeft: 16,
   },
+  likesContainer: {
+    paddingHorizontal: 14,
+    paddingBottom: 6,
+  },
   likes: {
-    paddingHorizontal: 12,
+    fontFamily: "Inter_600SemiBold",
     fontSize: 14,
-    fontWeight: "600",
-    backgroundColor: "#FFEEB7",
+    color: "#262626",
   },
   caption: {
-    padding: 12,
-    paddingTop: 4,
-    backgroundColor: "#FFEEB7",
+    paddingHorizontal: 14,
+    paddingBottom: 10,
   },
   captionText: {
     fontSize: 14,
+    lineHeight: 18,
+    color: "#262626",
+  },
+  captionContent: {
+    fontFamily: "Inter_400Regular",
+  },
+  hashtagContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 4,
   },
   hashtag: {
-    color: "#007AFF",
+    fontFamily: "Inter_500Medium",
+    color: "#003569",
+    marginRight: 4,
   },
   commentsSection: {
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    backgroundColor: "#FFEEB7",
-    maxHeight: 300,
+    borderTopWidth: 0.5,
+    borderTopColor: "#dbdbdb",
+    backgroundColor: "#ffffff",
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
   },
   commentsList: {
-    maxHeight: 200,
-    padding: 12,
+    maxHeight: 300,
+    padding: 14,
   },
   commentItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 8,
-    paddingRight: 8,
-  },
-  commentUsername: {
-    fontWeight: "600",
-    marginRight: 8,
-  },
-  commentText: {
-    flex: 1,
-    flexWrap: "wrap",
-  },
-  addCommentSection: {
-    flexDirection: "row",
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#e0e0e0",
-    alignItems: "center",
-  },
-  commentInput: {
-    flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    backgroundColor: "#f0f0f0",
-    marginRight: 10,
-  },
-  postCommentButton: {
-    padding: 8,
-  },
-  postCommentText: {
-    color: "#007AFF",
-    fontWeight: "600",
+    marginBottom: 16,
+    paddingHorizontal: 4,
   },
   commentContent: {
     flex: 1,
     flexDirection: "row",
-    flexWrap: "wrap",
     alignItems: "center",
+    backgroundColor: "#ffffff",
+    padding: 12,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  commentUsername: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+    marginRight: 8,
+    color: "#262626",
+  },
+  commentText: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#262626",
+    flex: 1,
+  },
+  addCommentSection: {
+    flexDirection: "row",
+    padding: 12,
+    borderTopWidth: 0.5,
+    borderTopColor: "#dbdbdb",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+  },
+  commentInput: {
+    flex: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    color: "#262626",
+  },
+  postCommentButton: {
+    paddingHorizontal: 12,
+  },
+  postCommentText: {
+    fontFamily: "Inter_600SemiBold",
+    color: "#0095f6",
+    fontSize: 14,
   },
   deleteButton: {
-    padding: 4,
+    padding: 8,
+    marginLeft: 8,
+    backgroundColor: "#ffffff",
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   seeMoreButton: {
-    padding: 12,
-    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   seeMoreText: {
-    color: "#666",
+    fontFamily: "Inter_500Medium",
     fontSize: 14,
-    fontWeight: "500",
+    color: "#8e8e8e",
   },
   overlay: {
     position: "absolute",
@@ -684,7 +832,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
     zIndex: 1000,
     justifyContent: "center",
     alignItems: "center",
@@ -692,29 +840,22 @@ const styles = StyleSheet.create({
   likesModal: {
     width: "90%",
     maxHeight: "70%",
-    backgroundColor: "#FFEEB7",
+    backgroundColor: "#ffffff",
     borderRadius: 12,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
   },
   likesHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#dbdbdb",
   },
   likesTitle: {
+    fontFamily: "Inter_600SemiBold",
     fontSize: 16,
-    fontWeight: "600",
+    color: "#262626",
   },
   closeButton: {
     padding: 4,
@@ -726,52 +867,156 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#e0e0e0",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#dbdbdb",
   },
   likeUserImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     marginRight: 12,
   },
   likeUsername: {
+    fontFamily: "Inter_500Medium",
     fontSize: 14,
-    fontWeight: "500",
+    color: "#262626",
   },
   emptyLikes: {
     padding: 20,
     alignItems: "center",
   },
   emptyLikesText: {
-    fontSize: 16,
-    color: "#666",
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#8e8e8e",
   },
-  followButton: {
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 14,
+  deleteModal: {
+    width: "80%",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    padding: 20,
+    alignItems: "center",
+  },
+  deleteTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 18,
+    color: "#262626",
+    marginBottom: 12,
+  },
+  deleteMessage: {
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    color: "#262626",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  deleteButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingHorizontal: 20,
+  },
+  cancelButton: {
+    backgroundColor: "#f0f0f0",
+    marginRight: 10,
+  },
+  confirmButton: {
+    backgroundColor: "#FF3B30",
+  },
+  cancelButtonText: {
+    fontFamily: "Inter_600SemiBold",
+    color: "#262626",
+    fontSize: 14,
+  },
+  confirmButtonText: {
+    fontFamily: "Inter_600SemiBold",
+    color: "#ffffff",
+    fontSize: 14,
+  },
+  navButton: {
+    position: "absolute",
+    top: "50%",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  prevButton: {
+    left: 10,
+  },
+  navButtonNext: {
+    right: 10,
+  },
+  imageCounter: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 999,
-    marginLeft: 8,
-    minWidth: 70,
-    alignItems: 'center',
+    borderRadius: 12,
   },
-  followingButton: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#CCCCCC',
-    borderWidth: 1,
+  imageCounterText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
-  followButtonText: {
-    color: '#007AFF',
-    fontSize: 13,
-    fontWeight: '600',
+  shareModal: {
+    width: "90%",
+    maxHeight: "70%",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    overflow: "hidden",
   },
-  followingButtonText: {
-    color: '#222222',
-    fontSize: 13,
-    fontWeight: '600',
+  shareHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#dbdbdb",
+  },
+  shareTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: "#262626",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#dbdbdb",
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  usersList: {
+    maxHeight: 400,
+  },
+  userItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#dbdbdb",
+  },
+  userImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+  },
+  userName: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: "#262626",
   },
 });
 
