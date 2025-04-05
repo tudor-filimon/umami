@@ -2,8 +2,22 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
+import { BACKEND_URL } from '../constant';
+import { useNavigation } from '@react-navigation/native'
+import { StackNavigationProp } from '@react-navigation/stack';
+
+// Define your navigation parameter list
+type RootStackParamList = {
+  Home: undefined;
+  Recipes: { recipeData: object[] };
+  // Add other screens here as needed
+};
+
+type NavigationProps = StackNavigationProp<RootStackParamList>;
 
 const GenerateScreen = () => {
+  const navigation = useNavigation<NavigationProps>();
+
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
   const [recipes, setRecipes] = useState<string[]>([]); // To store the generated recipes
@@ -37,8 +51,7 @@ const GenerateScreen = () => {
       });
 
       if (!result.canceled) {
-        const imageUri = result.assets[0].uri;
-        processImage(imageUri);
+        await generateRecipes(result);
       }
     }
   };
@@ -52,69 +65,60 @@ const GenerateScreen = () => {
         quality: 1,
       });
 
+      console.log("meow moew mmeow meow meow");
+
       if (!result.canceled) {
-        const imageUri = result.assets[0].uri;
-        processImage(imageUri);
+        await generateRecipes(result);
+      }else{
+        console.log('Image selection cancelled');
       }
     }
   };
 
-  const processImage = async (imageUri: string) => {
+
+  const generateRecipes = async (result: any) => {
+    const image = result.assets[0];
+    const uri = image.uri;
+    const fileName = uri.split('/').pop();
+    const match = /\.(\w+)$/.exec(fileName || '');
+    const type = match ? `image/${match[1]}` : `image`;
+  
+    // Create FormData and append the file
+    const formData = new FormData();
+    formData.append('image', {
+      uri,
+      name: fileName,
+      type,
+    } as any);
+  
     try {
-      setLoading(true);
-
-      // Step 1: Upload the image to the Vision API
-            const formData = new FormData();
-      // @ts-ignore
-      formData.append('file', {
-        uri: imageUri,
-        name: 'image.jpg',
-        type: 'image/jpeg',
-      });
-
-      const visionResponse = await fetch('http://172.22.62.72:5001/api/vision/analyze-image', {
+      console.log('Uploading image...');
+      const response = await fetch(BACKEND_URL + "/api/chatgpt/get-recipes", {
         method: 'POST',
         body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        // Remove Content-Type header - let React Native set it automatically
+        // with the proper multipart/form-data boundary
       });
-
-      if (!visionResponse.ok) {
-        throw new Error('Failed to analyze image');
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${errorText}`);
       }
+  
+      const data = await response.json();
+      Alert.alert('Upload Successful', 'Recipes generated!');
+      
+      // Navigate to the recipes screen with the generated data
+      navigation.navigate('Recipes', { recipeData: data });
+      console.log(data);
 
-      const visionData = await visionResponse.json();
-      const ingredients = visionData.ingredients;
-
-      if (!ingredients || ingredients.length === 0) {
-        Alert.alert('No ingredients detected', 'Please try again with a clearer image.');
-        setLoading(false);
-        return;
-      }
-
-      // Step 2: Send the detected ingredients to ChatGPT API
-      const chatGptResponse = await fetch('http://172.22.62.72:5001/api/chatgpt/get-recipes',  {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ingredients }),
-      });
-
-      if (!chatGptResponse.ok) {
-        throw new Error('Failed to generate recipes');
-      }
-
-      const chatGptData = await chatGptResponse.json();
-      setRecipes(chatGptData); // Store the generated recipes
-      setLoading(false);
+      return data;
     } catch (error) {
-      console.error('Error processing image:', error);
-      Alert.alert('Error', 'Something went wrong. Please try again.');
-      setLoading(false);
+      console.error('Upload failed:', error);
+      // Alert.alert('Upload Failed', error.message || 'Something went wrong!');
+      throw error;
     }
-  };
+  }
 
   return (
     <View style={styles.container}>

@@ -37,7 +37,8 @@ type Comment = {
 type Post = {
   id: string;
   userName: string;
-  imageUrl: string;
+  imageUrl: string; // Single image URL
+  imageUrls?: string[]; // Optional array of image URLs
   caption: string;
   hashtags: string[];
   createdAt: any;
@@ -57,6 +58,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
   const [comments, setComments] = useState<Comment[]>(post.comments || []);
   const [userName, setUserName] = useState<string>("");
   const [showDeleteOverlay, setShowDeleteOverlay] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     fetchUserName();
@@ -166,6 +168,26 @@ const InstagramPost = ({ post }: { post: Post }) => {
   const displayedComments = showAllComments ? comments : comments.slice(0, 10);
   const hasMoreComments = comments.length > 10;
 
+  const handleNextImage = () => {
+    if (
+      post.imageUrls &&
+      Array.isArray(post.imageUrls) &&
+      currentImageIndex < post.imageUrls.length - 1
+    ) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (
+      post.imageUrls &&
+      Array.isArray(post.imageUrls) &&
+      currentImageIndex > 0
+    ) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
   const LikesOverlay = () => (
     <View style={styles.overlay}>
       <View style={styles.likesModal}>
@@ -262,7 +284,46 @@ const InstagramPost = ({ post }: { post: Post }) => {
       </View>
 
       {/* Image */}
-      <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
+      <View style={styles.imageContainer}>
+        <Image
+          source={{
+            uri:
+              post.imageUrls &&
+              Array.isArray(post.imageUrls) &&
+              post.imageUrls.length > 0
+                ? post.imageUrls[currentImageIndex]
+                : post.imageUrl,
+          }}
+          style={styles.postImage}
+        />
+        {post.imageUrls &&
+          Array.isArray(post.imageUrls) &&
+          post.imageUrls.length > 1 && (
+            <>
+              {currentImageIndex > 0 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.prevButton]}
+                  onPress={handlePrevImage}
+                >
+                  <Ionicons name="chevron-back" size={24} color="#fff" />
+                </TouchableOpacity>
+              )}
+              {currentImageIndex < post.imageUrls.length - 1 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.navButtonNext]}
+                  onPress={handleNextImage}
+                >
+                  <Ionicons name="chevron-forward" size={24} color="#fff" />
+                </TouchableOpacity>
+              )}
+              <View style={styles.imageCounter}>
+                <Text style={styles.imageCounterText}>
+                  {currentImageIndex + 1}/{post.imageUrls.length}
+                </Text>
+              </View>
+            </>
+          )}
+      </View>
 
       {/* Actions */}
       <View style={styles.actions}>
@@ -480,6 +541,10 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 14,
     color: "#262626",
+  },
+  imageContainer: {
+    width: "100%",
+    position: "relative",
   },
   postImage: {
     width: "100%",
@@ -732,6 +797,36 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: "#ffffff",
     fontSize: 14,
+  },
+  navButton: {
+    position: "absolute",
+    top: "50%",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  prevButton: {
+    left: 10,
+  },
+  navButtonNext: {
+    right: 10,
+  },
+  imageCounter: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
 });
 
