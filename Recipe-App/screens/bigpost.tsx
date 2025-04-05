@@ -13,6 +13,7 @@ import {
   TextInput,
   Keyboard,
   Alert,
+  Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { RouteProp, useRoute } from "@react-navigation/native";
@@ -30,7 +31,6 @@ import {
 import { firestore, auth } from "../firebaseConfig";
 
 // Define types
-
 type Comment = {
   id: string;
   username: string;
@@ -49,6 +49,7 @@ type Post = {
   likes?: number;
   likedBy?: string[];
   comments?: Comment[];
+  imageUrls?: string[];
 };
 
 type RootStackParamList = {
@@ -64,7 +65,10 @@ const InstagramPost = ({ post }: { post: Post }) => {
   const [showAllComments, setShowAllComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [comments, setComments] = useState<Comment[]>(post.comments || []);
-  const [userProfilePic, setUserProfilePic] = useState<string>("https://via.placeholder.com/32");
+  const [userProfilePic, setUserProfilePic] = useState<string>(
+    "https://via.placeholder.com/32"
+  );
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     fetchUserProfilePic();
@@ -136,6 +140,18 @@ const InstagramPost = ({ post }: { post: Post }) => {
     }
   };
 
+  const handleNextImage = () => {
+    if (post.imageUrls && currentImageIndex < post.imageUrls.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
   const displayedComments = showAllComments ? comments : comments.slice(0, 10);
   const hasMoreComments = comments.length > 10;
 
@@ -148,7 +164,41 @@ const InstagramPost = ({ post }: { post: Post }) => {
         </View>
       </View>
 
-      <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
+      <View style={styles.imageContainer}>
+        <Image
+          source={{
+            uri: post.imageUrls
+              ? post.imageUrls[currentImageIndex]
+              : post.imageUrl,
+          }}
+          style={styles.postImage}
+        />
+        {post.imageUrls && post.imageUrls.length > 1 && (
+          <>
+            {currentImageIndex > 0 && (
+              <TouchableOpacity
+                style={[styles.navButton, styles.prevButton]}
+                onPress={handlePrevImage}
+              >
+                <Ionicons name="chevron-back" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {currentImageIndex < post.imageUrls.length - 1 && (
+              <TouchableOpacity
+                style={[styles.navButton, styles.nextButton]}
+                onPress={handleNextImage}
+              >
+                <Ionicons name="chevron-forward" size={24} color="#fff" />
+              </TouchableOpacity>
+            )}
+            <View style={styles.imageCounter}>
+              <Text style={styles.imageCounterText}>
+                {currentImageIndex + 1}/{post.imageUrls.length}
+              </Text>
+            </View>
+          </>
+        )}
+      </View>
 
       <View style={styles.actions}>
         <TouchableOpacity onPress={handleLike} style={styles.actionButton}>
@@ -170,7 +220,8 @@ const InstagramPost = ({ post }: { post: Post }) => {
 
       <View style={styles.caption}>
         <Text style={styles.captionText}>
-          <Text style={styles.username}>{post.userName}</Text> {post.caption || ""}
+          <Text style={styles.username}>{post.userName}</Text>{" "}
+          {post.caption || ""}
         </Text>
         <View style={styles.hashtagContainer}>
           {post.hashtags &&
@@ -196,7 +247,9 @@ const InstagramPost = ({ post }: { post: Post }) => {
                 style={styles.seeMoreButton}
                 onPress={() => setShowAllComments(true)}
               >
-                <Text style={styles.seeMoreText}>View all {comments.length} comments</Text>
+                <Text style={styles.seeMoreText}>
+                  View all {comments.length} comments
+                </Text>
               </TouchableOpacity>
             )}
           </ScrollView>
@@ -233,7 +286,10 @@ const BigPost: React.FC = () => {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      const q = query(collection(firestore, "posts"), orderBy("createdAt", "desc"));
+      const q = query(
+        collection(firestore, "posts"),
+        orderBy("createdAt", "desc")
+      );
       const snapshot = await getDocs(q);
       const fetchedPosts = snapshot.docs.map((docSnap) => ({
         id: docSnap.id,
@@ -249,7 +305,10 @@ const BigPost: React.FC = () => {
   useEffect(() => {
     if (flatListRef.current && initialIndex < posts.length) {
       setTimeout(() => {
-        flatListRef.current?.scrollToIndex({ index: initialIndex, animated: true });
+        flatListRef.current?.scrollToIndex({
+          index: initialIndex,
+          animated: true,
+        });
       }, 100);
     }
   }, [initialIndex]);
@@ -261,10 +320,23 @@ const BigPost: React.FC = () => {
         data={currentPosts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <InstagramPost post={item} />}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
         contentContainerStyle={{ paddingBottom: 80, paddingTop: 10 }}
         showsVerticalScrollIndicator={false}
         initialNumToRender={5}
+        getItemLayout={(data, index) => ({
+          length: Dimensions.get("window").width,
+          offset: Dimensions.get("window").width * index,
+          index,
+        })}
+        onScrollToIndexFailed={({ index, averageItemLength }) => {
+          flatListRef.current?.scrollToOffset({
+            offset: index * averageItemLength,
+            animated: true,
+          });
+        }}
       />
     </View>
   );
@@ -305,6 +377,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
     color: "#262626",
+  },
+  imageContainer: {
+    position: "relative",
+    width: "100%",
   },
   postImage: {
     width: "100%",
@@ -397,5 +473,35 @@ const styles = StyleSheet.create({
   seeMoreText: {
     fontSize: 14,
     color: "#8e8e8e",
+  },
+  navButton: {
+    position: "absolute",
+    top: "50%",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  prevButton: {
+    left: 10,
+  },
+  nextButton: {
+    right: 10,
+  },
+  imageCounter: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
 });

@@ -1,34 +1,40 @@
-import * as React from 'react';
+import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
 import { Image } from 'react-native';
-import HomeScreen from './screens/home';
-import GenerateScreen from './screens/generate';
-import PostScreen from './screens/post';
-import ProfileScreen from './screens/profile';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { Ionicons } from '@expo/vector-icons';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 import LoginScreen from './screens/login';
 import SignUpScreen from './screens/signup';
 import CaptionScreen from './screens/caption';
 import EditProfileScreen from './screens/editprofile';
 import BigPostScreen from './screens/bigpost'; // Adjust the path if necessary
+import BigRecipeScreen from './screens/bigrecipes'; // Adjust the path if necessary
 import { colors } from './styles/globalStyles';
-import { useFonts } from '@expo-google-fonts/inter';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from '@expo-google-fonts/inter';
-import * as SplashScreen from 'expo-splash-screen';
-import { Ionicons } from '@expo/vector-icons';
+import HomeScreen from './screens/home';
+import GenerateScreen from './screens/generate';
+import PostScreen from './screens/post';
+import ProfileScreen from './screens/profile';
+import MessagesScreen from './screens/messages';
 
-import EmailLogger from "./components/CallWidget";
-
-type RootStackParamList = {
+export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined;
-  Caption: { imageUri: string; userName: string };
+  Caption: { imageUri: string };
+  Messages: undefined;
 };
 
 const Tab = createBottomTabNavigator();
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function MainTabs() {
   return (
@@ -202,7 +208,6 @@ export default function App() {
     >
       <Stack.Navigator
         screenOptions={{
-          cardStyle: { backgroundColor: colors.background },
           headerStyle: { backgroundColor: colors.navBar },
           headerTintColor: colors.text,
           headerTitleStyle: {
@@ -211,16 +216,43 @@ export default function App() {
         }}
         initialRouteName="Main"
       >
-        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="SignUp" component={SignUpScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
-        <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
-        <Stack.Screen name="BigPost" component={BigPostScreen} options={{ headerShown: false }} />
-        <Stack.Screen 
-          name="Caption" 
-          component={CaptionScreen} 
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="SignUp"
+          component={SignUpScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Main"
+          component={MainTabs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="EditProfile"
+          component={EditProfileScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="BigPost"
+          component={BigPostScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Caption"
+          component={CaptionScreen}
           options={{
             headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="Messages" 
+          component={MessagesScreen} 
+          options={{
+            headerShown: false
           }}
         />
       </Stack.Navigator>
