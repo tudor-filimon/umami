@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 
-const HomeScreen = () => {
+const GenerateScreen = () => {
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
+  const [recipes, setRecipes] = useState<string[]>([]); // To store the generated recipes
+  const [loading, setLoading] = useState(false);
 
   const askGalleryPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -35,8 +37,8 @@ const HomeScreen = () => {
       });
 
       if (!result.canceled) {
-        Alert.alert('Image Selected', 'You have successfully chosen an image.');
-        console.log(result.assets[0].uri); // Handle the selected image URI
+        const imageUri = result.assets[0].uri;
+        processImage(imageUri);
       }
     }
   };
@@ -51,16 +53,73 @@ const HomeScreen = () => {
       });
 
       if (!result.canceled) {
-        Alert.alert('Image Captured', 'You have successfully taken a picture.');
-        console.log(result.assets[0].uri); // Handle the captured image URI
+        const imageUri = result.assets[0].uri;
+        processImage(imageUri);
       }
+    }
+  };
+
+  const processImage = async (imageUri: string) => {
+    try {
+      setLoading(true);
+
+      // Step 1: Upload the image to the Vision API
+            const formData = new FormData();
+      // @ts-ignore
+      formData.append('file', {
+        uri: imageUri,
+        name: 'image.jpg',
+        type: 'image/jpeg',
+      });
+
+      const visionResponse = await fetch('http://172.22.62.72:5001/api/vision/analyze-image', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (!visionResponse.ok) {
+        throw new Error('Failed to analyze image');
+      }
+
+      const visionData = await visionResponse.json();
+      const ingredients = visionData.ingredients;
+
+      if (!ingredients || ingredients.length === 0) {
+        Alert.alert('No ingredients detected', 'Please try again with a clearer image.');
+        setLoading(false);
+        return;
+      }
+
+      // Step 2: Send the detected ingredients to ChatGPT API
+      const chatGptResponse = await fetch('http://172.22.62.72:5001/api/chatgpt/get-recipes',  {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ingredients }),
+      });
+
+      if (!chatGptResponse.ok) {
+        throw new Error('Failed to generate recipes');
+      }
+
+      const chatGptData = await chatGptResponse.json();
+      setRecipes(chatGptData); // Store the generated recipes
+      setLoading(false);
+    } catch (error) {
+      console.error('Error processing image:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+      setLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>AI Recipe Generator</Text>
-      <Text style={styles.subtitle}>take a picture to start cooking...</Text>
+      <Text style={styles.subtitle}>Take a picture to start cooking...</Text>
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={handleUpload}>
@@ -70,6 +129,20 @@ const HomeScreen = () => {
           <Text style={styles.buttonText}>Camera</Text>
         </TouchableOpacity>
       </View>
+
+      {loading && <Text style={styles.loadingText}>Loading...</Text>}
+
+      {recipes.length > 0 && (
+        <FlatList
+          data={recipes}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={styles.recipeContainer}>
+              <Text style={styles.recipeText}>{item}</Text>
+            </View>
+          )}
+        />
+      )}
     </View>
   );
 };
@@ -109,19 +182,23 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: 'white',
   },
-  footerNav: {
-    position: 'absolute',
-    bottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    width: '100%',
-    paddingVertical: 10,
-    backgroundColor: 'white',
-  },
-  navIcon: {
-    color: 'black',
+  loadingText: {
+    marginTop: 20,
     fontSize: 16,
+    color: 'gray',
+  },
+  recipeContainer: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    width: '90%',
+    alignItems: 'center',
+  },
+  recipeText: {
+    fontSize: 16,
+    color: 'black',
   },
 });
 
-export default HomeScreen;
+export default GenerateScreen;

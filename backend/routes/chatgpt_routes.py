@@ -16,39 +16,39 @@ def get_recipes():
     try:
         # Check if ingredients are provided directly in the request body
         ingredients = request.json.get('ingredients')
-        if not ingredients:
-            # Assuming the image file is sent in the request
-            image_file = request.files.get('file')
-            if not image_file:
-                return jsonify({"error": "No file or ingredients provided"}), 400
+        print(f"Ingredients received: {ingredients}")
 
-            # Analyze the image to get ingredients
-            ingredients = vision_controller.analyze_image(image_file)
-            if not ingredients:
-                return jsonify({"error": "No ingredients found"}), 400
+        if not ingredients:
+            return jsonify({"error": "No ingredients provided"}), 400
 
         # Get the ChatGPT API key from environment variables
         api_key = os.getenv('CHATGPT_API_KEY')
+        print(f"ChatGPT API Key: {api_key}")
         if not api_key:
             return jsonify({"error": "ChatGPT API key not found"}), 500
 
         # Create the prompt for ChatGPT
         prompt = f'Generate 3 recipes using the following ingredients: {", ".join(ingredients)}. For each recipe, provide the name of the dish and quick steps to make it.'
+        print(f"Prompt sent to ChatGPT: {prompt}")
 
         # Call the OpenAI API to generate recipes
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "system", "content": "You are a helpful recipe assistant."},
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=500
+            max_tokens=500,
+            temperature=0.7
         )
-        recipes = response.choices[0].message['content'].strip().split('\n\n')
-        return jsonify(recipes)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
+        print(f"Response from OpenAI: {response}")
+        recipes = response['choices'][0]['message']['content'].strip().split('\n\n')
+        return jsonify(recipes)
+
+    except Exception as e:
+        print(f"Error in /api/chatgpt/get-recipes: {e}")
+        return jsonify({"error": str(e)}), 500
 
 def setChatgptRoutes(app):
     app.register_blueprint(chatgpt_bp)
