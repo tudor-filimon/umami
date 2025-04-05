@@ -12,6 +12,8 @@ import Animated, {
 } from 'react-native-reanimated'; 
 import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
+import { firestore as db } from '../firebaseConfig';
 
 type RootStackParamList = {
   Recipes: { recipeData: any };
@@ -34,32 +36,22 @@ const fetchRecipes = async () => {
 
 const saveRecipe = async (recipe: Recipe, uid: string) => {
   try {
-    const response = await fetch(
-      `http://172.20.10.3:5000/api/recipes/user/${uid}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: JSON.stringify({
-          recipeId: recipe.id,
-          name: recipe.name,
-          image: recipe.image,
-          ingredients: recipe.ingredients
-        }),
-      }
-    );
+    // Import Firebase
 
-    // First check if response is ok (status 200-299)
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Server responded with status ${response.status}: ${errorText}`);
-    }
-
-    // Then try to parse as JSON
-    const data = await response.json();
-    return data;
+    // Create a new object without the id field and add uid
+    const { id, ...recipeData } = recipe;
+    const savedRecipe = {
+      ...recipeData,
+      uid,
+      createdAt: new Date()
+    };
+    
+    // Save to Firestore
+    const recipesCollection = collection(db, 'recipes');
+    const docRef = await addDoc(recipesCollection, savedRecipe);
+    
+    console.log('Recipe saved with ID:', docRef.id);
+    return { id: docRef.id, ...savedRecipe };
   } catch (error) {
     console.error('Error saving recipe:', error);
     throw error;
@@ -72,6 +64,7 @@ type Recipe = {
   image: string;
   name: string;
   ingredients: string;
+  steps?: string[]; // Add steps as an optional array of strings
 };
 
 type ContextType = {
@@ -131,7 +124,7 @@ const RecipeCard = ({
           { velocity: event.velocityX },
           () => {
             runOnJS(onSwipeComplete)();
-            // runOnJS(saveRecipe)(recipe, 'iy7CH21CAbW1R1ZUlezqlFYxgNG2'); // Replace with actual UID
+            runOnJS(saveRecipe)(recipe, 'iy7CH21CAbW1R1ZUlezqlFYxgNG2'); // Replace with actual UID
           }
         );
         translateY.value = withSpring(0);
@@ -189,7 +182,19 @@ const RecipeCard = ({
         </View>
         <View style={styles.bottom}>
           <Text style={styles.headerText}>{recipe.name}</Text>
-          <Text style={styles.normalText}>Ingredients: {recipe.ingredients}</Text>
+          <Text style={styles.ingredientsText}>Ingredients: {recipe.ingredients}</Text>
+          
+          {/* Display steps if available */}
+          {recipe.steps && recipe.steps.length > 0 && (
+            <View style={styles.stepsContainer}>
+              <Text style={styles.stepsHeader}>Steps:</Text>
+              <Text style={styles.stepsText}>
+                {Array.isArray(recipe.steps) 
+                  ? recipe.steps.slice(0, 2).join(', ') + (recipe.steps.length > 2 ? '...' : '')
+                  : typeof recipe.steps === 'string' ? recipe.steps : ''}
+              </Text>
+            </View>
+          )}
         </View>
       </Animated.View>
     </PanGestureHandler>
@@ -241,17 +246,19 @@ const RecipePage = () => {
                     ingredients: Array.isArray(recipe.ingredients) 
                       ? recipe.ingredients.join(', ') 
                       : recipe.ingredients || '',
+                    steps: recipe.steps || [], // Add steps here
                     image: "https://via.placeholder.com/318"
                   }));
                   break;
                 } else if (parsedRecipe.recipes && Array.isArray(parsedRecipe.recipes)) {
                   // Format: { recipes: [...] }
-                  processedRecipes = parsedRecipe.recipes.map((recipe: { name: any; ingredients: any[]; }, index: number) => ({
+                  processedRecipes = parsedRecipe.recipes.map((recipe: { name: any; ingredients: any[]; steps?: string[] }, index: number) => ({
                     id: index,
                     name: recipe.name || `Recipe ${index + 1}`,
                     ingredients: Array.isArray(recipe.ingredients)
                       ? recipe.ingredients.join(', ')
                       : recipe.ingredients || '',
+                    steps: recipe.steps || [], // Add steps here
                     image: "https://via.placeholder.com/318"
                   }));
                   break;
@@ -266,6 +273,7 @@ const RecipePage = () => {
                       ingredients: Array.isArray(recipe.ingredients)
                         ? recipe.ingredients.join(', ')
                         : recipe.ingredients || '',
+                      steps: recipe.steps || [], // Add this line to include steps
                       image: "https://via.placeholder.com/318"
                     };
                   });
@@ -278,6 +286,7 @@ const RecipePage = () => {
                     ingredients: Array.isArray(parsedRecipe.ingredients)
                       ? parsedRecipe.ingredients.join(', ')
                       : parsedRecipe.ingredients || '',
+                    steps: parsedRecipe.steps || [], // Add steps here
                     image: "https://via.placeholder.com/318"
                   });
                 }
@@ -417,6 +426,8 @@ const styles = StyleSheet.create({
     height: '25%',
     width: '100%',
     paddingLeft: 15,
+    paddingRight: 15, // Add padding for right side too
+    overflow: 'hidden', // Prevent text overflow
   },
   card: {
     backgroundColor: '#C4A381',
@@ -440,8 +451,26 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: '#644536',
+    marginBottom: 4, // Reduce space to fit more content
   },
   normalText: {
+    fontSize: 12,
+    color: '#644536',
+  },
+  ingredientsText: {
+    fontSize: 12,
+    color: '#644536',
+    marginBottom: 4, // Add some space before steps
+  },
+  stepsContainer: {
+    marginTop: 2,
+  },
+  stepsHeader: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#644536',
+  },
+  stepsText: {
     fontSize: 12,
     color: '#644536',
   },
