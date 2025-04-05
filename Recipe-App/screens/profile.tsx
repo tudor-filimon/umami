@@ -144,7 +144,13 @@ const ProfileScreen: React.FC = () => {
       const snapshot = await getDocs(q);
       const userRecipes = snapshot.docs
         .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((recipe) => !!recipe.name); // or whatever condition is necessary
+        .filter((recipe) => !!recipe.name)
+        .sort((a, b) => {
+          if (a.createdAt && b.createdAt) {
+            return b.createdAt.seconds - a.createdAt.seconds;
+          }
+          return 0;
+        });
       setSavedRecipes(userRecipes);
     } catch (error) {
       console.error('Error fetching user recipes:', error);
@@ -203,7 +209,7 @@ const ProfileScreen: React.FC = () => {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [16, 9], // or [4, 1], depends on your preferred banner ratio
+        aspect: [16, 9],
         quality: 0.8,
       });
       if (!result.canceled) {
@@ -227,10 +233,9 @@ const ProfileScreen: React.FC = () => {
         name: editName,
         pronouns: editPronouns,
         profileImage: editProfileImage,
-        bannerImage: editBannerImage, // BANNER CODE ADDED
+        bannerImage: editBannerImage,
       });
       setShowEditProfile(false);
-      // Refresh local user info
       fetchUserInfo();
     } catch (error) {
       Alert.alert('Error', 'Failed to save profile');
@@ -244,7 +249,7 @@ const ProfileScreen: React.FC = () => {
     setEditName(userInfo.name);
     setEditPronouns(userInfo.pronouns || '');
     setEditProfileImage(userInfo.profileImage || null);
-    setEditBannerImage(userInfo.bannerImage || null); // BANNER CODE ADDED
+    setEditBannerImage(userInfo.bannerImage || null);
     setShowEditProfile(true);
   };
 
@@ -286,8 +291,8 @@ const ProfileScreen: React.FC = () => {
 
   // Main UI
   return (
-    <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* Banner (BANNER CODE ADDED) */}
+    <View style={{ flex: 1, backgroundColor: '#c4a381' }}>
+      {/* Banner */}
       <Image
         source={{ uri: userInfo.bannerImage || 'https://placehold.co/400x120/png?text=Banner' }}
         style={{ width: '100%', height: 120 }}
@@ -307,44 +312,45 @@ const ProfileScreen: React.FC = () => {
             borderColor: '#fff',
           }}
         />
-        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#111', marginTop: 8 }}>
+        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#fff', marginTop: 8 }}>
           {userInfo.name}
         </Text>
         {userInfo.pronouns ? (
-          <Text style={{ fontSize: 14, color: '#555' }}>({userInfo.pronouns})</Text>
+          <Text style={{ fontSize: 14, color: '#fff' }}>({userInfo.pronouns})</Text>
         ) : null}
 
         <View style={{ flexDirection: 'row', marginTop: 6 }}>
-          <Text style={{ fontSize: 14, color: '#666', marginHorizontal: 10 }}>
+          <Text style={{ fontSize: 14, color: '#fff', marginHorizontal: 10 }}>
             {userInfo.followersCount} followers
           </Text>
-          <Text style={{ fontSize: 14, color: '#666', marginHorizontal: 10 }}>
+          <Text style={{ fontSize: 14, color: '#fff', marginHorizontal: 10 }}>
             {userInfo.followingCount} following
           </Text>
         </View>
 
         <View style={{ flexDirection: 'row', marginTop: 10, gap: 10 }}>
+          {/* Updated buttons: white background with brown text (#c4a381) */}
           <TouchableOpacity
             onPress={openEditProfile}
             style={{
-              backgroundColor: '#f0f0f0',
+              backgroundColor: '#fff',
               paddingHorizontal: 20,
               paddingVertical: 8,
               borderRadius: 10,
             }}
           >
-            <Text style={{ fontSize: 14, color: '#111' }}>Edit Profile</Text>
+            <Text style={{ fontSize: 14, color: '#c4a381' }}>Edit Profile</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleLogout}
             style={{
-              backgroundColor: '#f0f0f0',
+              backgroundColor: '#fff',
               paddingHorizontal: 20,
               paddingVertical: 8,
               borderRadius: 10,
             }}
           >
-            <Text style={{ fontSize: 14, color: '#111' }}>Log Out</Text>
+            <Text style={{ fontSize: 14, color: '#c4a381' }}>Log Out</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -361,12 +367,12 @@ const ProfileScreen: React.FC = () => {
         }}
       >
         <TouchableOpacity onPress={() => setSelectedTab('posts')}>
-          <Text style={{ fontWeight: selectedTab === 'posts' ? 'bold' : 'normal' }}>
+          <Text style={{ fontWeight: selectedTab === 'posts' ? 'bold' : 'normal', color: '#fff' }}>
             POSTS
           </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setSelectedTab('saved')}>
-          <Text style={{ fontWeight: selectedTab === 'saved' ? 'bold' : 'normal' }}>
+          <Text style={{ fontWeight: selectedTab === 'saved' ? 'bold' : 'normal', color: '#fff' }}>
             SAVED
           </Text>
         </TouchableOpacity>
@@ -383,7 +389,7 @@ const ProfileScreen: React.FC = () => {
             contentContainerStyle={{ paddingBottom: 100 }}
           />
         ) : (
-          <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#fff' }}>
             No posts yet
           </Text>
         )
@@ -396,7 +402,7 @@ const ProfileScreen: React.FC = () => {
           contentContainerStyle={{ paddingBottom: 100 }}
         />
       ) : (
-        <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
+        <Text style={{ textAlign: 'center', marginTop: 20, color: '#fff' }}>
           No saved recipes yet
         </Text>
       )}
@@ -423,7 +429,7 @@ const ProfileScreen: React.FC = () => {
               Edit Profile
             </Text>
 
-            {/* Pick Banner (BANNER CODE ADDED) */}
+            {/* Pick Banner */}
             <TouchableOpacity
               onPress={pickBannerImage}
               disabled={uploading}

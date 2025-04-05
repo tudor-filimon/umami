@@ -1,6 +1,5 @@
-// Full BigPost.tsx with profile pictures fetched from Firestore and userName preserved
-
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   View,
   Text,
@@ -16,7 +15,6 @@ import {
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { RouteProp, useRoute } from "@react-navigation/native";
 import {
   collection,
   query,
@@ -56,8 +54,9 @@ type RootStackParamList = {
   BigPost: { posts: Post[]; initialIndex: number };
 };
 
-type BigPostRouteProp = RouteProp<RootStackParamList, "BigPost">;
+type BigPostRouteProp = ReturnType<typeof useRoute>;
 
+// Individual post component
 const InstagramPost = ({ post }: { post: Post }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [likesCount, setLikesCount] = useState(post.likes || 0);
@@ -279,6 +278,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
 const BigPost: React.FC = () => {
   const route = useRoute<BigPostRouteProp>();
   const { posts, initialIndex } = route.params;
+  const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const [currentPosts, setCurrentPosts] = useState<Post[]>(posts);
   const flatListRef = useRef<FlatList<Post>>(null);
@@ -315,6 +315,14 @@ const BigPost: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000831" }}>
+      {/* Back Button with same style as in BigRecipeScreen */}
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}
+      >
+        <Ionicons name="chevron-back" size={28} color="#fff" />
+      </TouchableOpacity>
+
       <FlatList
         ref={flatListRef}
         data={currentPosts}
@@ -345,6 +353,15 @@ const BigPost: React.FC = () => {
 export default BigPost;
 
 const styles = StyleSheet.create({
+  backButton: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    zIndex: 10,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    padding: 8,
+    borderRadius: 20,
+  },
   card: {
     width: "96%",
     backgroundColor: "#ffffff",
