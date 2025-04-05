@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Animated, Easing } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 import { BACKEND_URL } from '../constant';
-import { useNavigation } from '@react-navigation/native'
+import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 
 // Define your navigation parameter list
@@ -22,6 +22,49 @@ const GenerateScreen = () => {
   const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
   const [recipes, setRecipes] = useState<string[]>([]); // To store the generated recipes
   const [loading, setLoading] = useState(false);
+  
+  // Create animation values for the loading indicator
+  const spinValue = new Animated.Value(0);
+  const opacityValue = new Animated.Value(0);
+  
+  // Start the animation when loading state changes
+  useEffect(() => {
+    if (loading) {
+      // Fade in the loading container
+      Animated.timing(opacityValue, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
+      // Create a continuous rotation animation
+      Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1500,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      // Fade out when loading completes
+      Animated.timing(opacityValue, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      
+      // Stop the animation
+      spinValue.stopAnimation();
+      spinValue.setValue(0);
+    }
+  }, [loading]);
+  
+  // Create the interpolated rotation value
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   const askGalleryPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -51,7 +94,15 @@ const GenerateScreen = () => {
       });
 
       if (!result.canceled) {
-        await generateRecipes(result);
+        setLoading(true);
+        try {
+          await generateRecipes(result);
+        } catch (error) {
+          console.error('Recipe generation failed:', error);
+          Alert.alert('Error', 'Failed to generate recipes. Please try again.');
+        } finally {
+          setLoading(false);
+        }
       }
     }
   };
@@ -65,16 +116,21 @@ const GenerateScreen = () => {
         quality: 1,
       });
 
-      console.log("meow moew mmeow meow meow");
-
       if (!result.canceled) {
-        await generateRecipes(result);
-      }else{
+        setLoading(true);
+        try {
+          await generateRecipes(result);
+        } catch (error) {
+          console.error('Recipe generation failed:', error);
+          Alert.alert('Error', 'Failed to generate recipes. Please try again.');
+        } finally {
+          setLoading(false);
+        }
+      } else {
         console.log('Image selection cancelled');
       }
     }
   };
-
 
   const generateRecipes = async (result: any) => {
     const image = result.assets[0];
@@ -96,8 +152,6 @@ const GenerateScreen = () => {
       const response = await fetch(BACKEND_URL + "/api/chatgpt/get-recipes", {
         method: 'POST',
         body: formData,
-        // Remove Content-Type header - let React Native set it automatically
-        // with the proper multipart/form-data boundary
       });
   
       if (!response.ok) {
@@ -115,7 +169,6 @@ const GenerateScreen = () => {
       return data;
     } catch (error) {
       console.error('Upload failed:', error);
-      // Alert.alert('Upload Failed', error.message || 'Something went wrong!');
       throw error;
     }
   }
@@ -126,15 +179,43 @@ const GenerateScreen = () => {
       <Text style={styles.subtitle}>Take a picture to start cooking...</Text>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={handleUpload}>
+        <TouchableOpacity 
+          style={[styles.button, loading && styles.disabledButton]} 
+          onPress={handleUpload}
+          disabled={loading}
+        >
           <Text style={styles.buttonText}>Upload</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={handleCamera}>
+        <TouchableOpacity 
+          style={[styles.button, loading && styles.disabledButton]} 
+          onPress={handleCamera}
+          disabled={loading}
+        >
           <Text style={styles.buttonText}>Camera</Text>
         </TouchableOpacity>
       </View>
 
-      {loading && <Text style={styles.loadingText}>Loading...</Text>}
+      {/* Dynamic Loading Indicator */}
+      <Animated.View 
+        style={[
+          styles.loadingContainer, 
+          { opacity: opacityValue }
+        ]}
+        pointerEvents={loading ? 'auto' : 'none'}
+      >
+        <View style={styles.loadingContent}>
+          <Animated.View 
+            style={[
+              styles.loadingCircle,
+              { transform: [{ rotate: spin }] }
+            ]}
+          >
+            <View style={styles.circleDot} />
+          </Animated.View>
+          <Text style={styles.loadingText}>Generating recipes...</Text>
+          <Text style={styles.loadingSubtext}>This may take a moment</Text>
+        </View>
+      </Animated.View>
 
       {recipes.length > 0 && (
         <FlatList
@@ -181,15 +262,66 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginHorizontal: 10,
   },
+  disabledButton: {
+    backgroundColor: '#666', // Grayed out when disabled
+    opacity: 0.7,
+  },
   buttonText: {
     fontSize: 16,
     fontWeight: 'bold',
     color: 'white',
   },
+  // Loading indicator styles
+  loadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingContent: {
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+    width: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  loadingCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 3,
+    borderColor: '#FFEEB7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  circleDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#644536',
+    position: 'absolute',
+    top: 0,
+  },
   loadingText: {
-    marginTop: 20,
-    fontSize: 16,
-    color: 'gray',
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#644536',
+    marginBottom: 5,
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#888',
   },
   recipeContainer: {
     marginTop: 20,
