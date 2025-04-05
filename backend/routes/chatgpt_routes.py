@@ -25,9 +25,13 @@ def get_recipes():
         if not ingredients:
             return jsonify({"error": "No ingredients found in image"}), 400
 
+        # Get the meal type from the request header
+        meal_type = request.headers.get('Meal-Type', 'breakfast')
+        print(f"Received meal type from headers: {meal_type}")  # Debugging
+
         # Create prompt with VERY explicit formatting instructions
-        prompt = f'''Generate 3 recipes using some or all of these ingredients: {", ".join(ingredients)}.
-        Do NOT use the ingredients that are not fruits, vegetables, carbs and dairy. Format your response as a JSON object with recipe1, recipe2, and recipe3 keys EXACTLY like this:
+        prompt = f'''Generate 3 unique {meal_type} recipes using some or all of these ingredients: {", ".join(ingredients)}.
+Each recipe should be appropriate for {meal_type}. Do NOT use the ingredients that are not fruits, vegetables, carbs, and dairy. Format your response as a JSON object with recipe1, recipe2, and recipe3 keys EXACTLY like this:
         {{
           "recipe1": {{
             "name": "Recipe Name",
@@ -46,7 +50,10 @@ def get_recipes():
           }}
         }}
         Do not include any explanation or additional text outside the JSON object.'''
-        
+
+        # Print the prompt and meal type to the terminal
+        print(f"Generated GPT Prompt for meal type '{meal_type}':\n{prompt}")
+
         # Call OpenAI API
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -65,14 +72,6 @@ def get_recipes():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-        print(f"Response from OpenAI: {response}")
-        recipes = response['choices'][0]['message']['content'].strip().split('\n\n')
-        return jsonify(recipes)
-
-    except Exception as e:
-        print(f"Error in /api/chatgpt/get-recipes: {e}")
-        return jsonify({"error": str(e)}), 500
-
+    
 def setChatgptRoutes(app):
     app.register_blueprint(chatgpt_bp)
