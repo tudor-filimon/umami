@@ -14,6 +14,7 @@ import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-g
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { getFirestore, collection, addDoc } from 'firebase/firestore';
 import { firestore as db } from '../firebaseConfig';
+import { getAuth } from 'firebase/auth';
 
 type RootStackParamList = {
   Recipes: { recipeData: any };
@@ -38,7 +39,7 @@ const saveRecipe = async (recipe: Recipe, uid: string) => {
   try {
     // Import Firebase
 
-    // Create a new object without the id field and add uid
+    // Create a new object witnaut the id field and add uid
     const { id, ...recipeData } = recipe;
     const savedRecipe = {
       ...recipeData,
@@ -124,7 +125,11 @@ const RecipeCard = ({
           { velocity: event.velocityX },
           () => {
             runOnJS(onSwipeComplete)();
-            runOnJS(saveRecipe)(recipe, 'iy7CH21CAbW1R1ZUlezqlFYxgNG2'); // Replace with actual UID
+            // Import auth from Firebase
+            // Get the current user's ID
+            const auth = getAuth();
+            const userId = auth.currentUser?.uid || 'guest';
+            runOnJS(saveRecipe)(recipe, userId);
           }
         );
         translateY.value = withSpring(0);
@@ -372,7 +377,7 @@ const RecipePage = () => {
     });
 
     // Check if this was the last card
-    if (activeIndex.value + 1 >= recipes.length - 1) {
+    if (activeIndex.value + 1 > recipes.length - 1) {
       // Add a small delay for better UX
       setTimeout(() => {
         // navigation.goBack(); // should use navigation go back
@@ -475,8 +480,8 @@ const styles = StyleSheet.create({
     color: '#644536',
   },
   cardImage: {
-    width: 318,
-    height: 318,
+    width: 280,
+    height: 280, //changed from larger white block
     backgroundColor: 'white',
     padding: 10,
     borderRadius: 23,

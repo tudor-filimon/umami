@@ -1,6 +1,8 @@
 import os
 import openai
 import requests
+import io
+from PIL import Image
 from flask import Blueprint, request, jsonify
 from dotenv import load_dotenv
 from routes.VisionController import VisionController
@@ -11,6 +13,41 @@ openai.api_key = os.getenv("CHATGPT_API_KEY")
 chatgpt_bp = Blueprint('chatgpt_routes', __name__)
 vision_controller = VisionController()
 
+def compress_image(image_file, quality=80, max_size=(800, 800)):
+    """Compress the image to reduce size while maintaining reasonable quality"""
+    img = Image.open(image_file)
+    
+    # Resize if the image is too large
+    if img.width > max_size[0] or img.height > max_size[1]:
+        img.thumbnail(max_size, Image.LANCZOS)
+    
+    # Save compressed image to BytesIO
+    output = io.BytesIO()
+    
+    # Determine format based on original image
+    format = img.format if img.format else 'JPEG'
+    
+    # Convert RGBA to RGB for JPEG format
+    if format == 'JPEG' and img.mode == 'RGBA':
+        img = img.convert('RGB')
+        
+    # Save with compression
+    img.save(output, format=format, quality=quality, optimize=True)
+    output.seek(0)
+    
+    # Create a class that wraps BytesIO with a filename attribute
+    class BytesIOWithFilename(io.BytesIO):
+        def __init__(self, *args, **kwargs):
+            self.filename = kwargs.pop('filename', 'image.jpg')
+            super().__init__(*args, **kwargs)
+    
+    # Copy the data into a new BytesIO with filename
+    result = BytesIOWithFilename(filename=getattr(image_file, 'filename', 'image.jpg'))
+    result.write(output.getvalue())
+    result.seek(0)
+    
+    return result
+
 @chatgpt_bp.route('/api/chatgpt/get-recipes', methods=['POST'])
 def get_recipes():
     try:
@@ -20,14 +57,21 @@ def get_recipes():
             
         image_file = request.files['image']
         
-        # Analyze the image to get ingredients
-        ingredients = vision_controller.analyze_image(image_file)
+        # Compress the image before processing
+        compressed_image = compress_image(image_file)
+        
+        # Analyze the compressed image to get ingredients
+        ingredients = vision_controller.analyze_image(compressed_image)
         if not ingredients:
             return jsonify({"error": "No ingredients found in image"}), 400
 
+        # Get the meal type from the request header
+        meal_type = request.headers.get('Meal-Type', 'breakfast')
+        print(f"Received meal type from headers: {meal_type}")  # Debugging
+
         # Create prompt with VERY explicit formatting instructions
-        prompt = f'''Generate 3 recipes using some or all of these ingredients: {", ".join(ingredients)}.
-        Do NOT use the ingredients that are not fruits, vegetables, carbs and dairy. Format your response as a JSON object with recipe1, recipe2, and recipe3 keys EXACTLY like this:
+        prompt = f'''Generate 3 unique {meal_type} recipes using some or all of these ingredients: {", ".join(ingredients)}.
+Each recipe should be appropriate for {meal_type}. Do NOT use the ingredients that are not fruits, vegetables, carbs, and dairy. Format your response as a JSON object with recipe1, recipe2, and recipe3 keys EXACTLY like this:
         {{
           "recipe1": {{
             "name": "Recipe Name",
@@ -46,7 +90,10 @@ def get_recipes():
           }}
         }}
         Do not include any explanation or additional text outside the JSON object.'''
-        
+
+        # Print the prompt and meal type to the terminal
+        print(f"Generated GPT Prompt for meal type '{meal_type}':\n{prompt}")
+
         # Call OpenAI API
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
@@ -65,7 +112,6 @@ def get_recipes():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
+    
 def setChatgptRoutes(app):
     app.register_blueprint(chatgpt_bp)

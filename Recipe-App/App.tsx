@@ -18,19 +18,24 @@ import CaptionScreen from './screens/caption';
 import EditProfileScreen from './screens/editprofile';
 import BigPostScreen from './screens/bigpost'; // Adjust the path if necessary
 import BigRecipeScreen from './screens/bigrecipes'; // Adjust the path if necessary
+import Recipes from './screens/recipes'; // Adjust the path if necessary
 import { colors } from './styles/globalStyles';
 import HomeScreen from './screens/home';
 import GenerateScreen from './screens/generate';
 import PostScreen from './screens/post';
 import ProfileScreen from './screens/profile';
 import MessagesScreen from './screens/messages';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export type RootStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Main: undefined;
-  Caption: { imageUri: string };
   Messages: undefined;
+  Caption: { imageUris: string[]; userName: string };
+  EditProfile: undefined;
+  BigPost: undefined;
+  Recipes: { recipeData: object[] }
 };
 
 const Tab = createBottomTabNavigator();
@@ -41,7 +46,7 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         tabBarStyle: {
-          backgroundColor: "#ffffff",
+          backgroundColor: "#FFEEB7",
           borderTopWidth: 0,
           elevation: 0,
           height: 60,
@@ -65,7 +70,7 @@ function MainTabs() {
         tabBarInactiveTintColor: "#000000",
         tabBarShowLabel: false,
         headerStyle: {
-          backgroundColor: "#ffffff",
+          backgroundColor: "#C4A381",
           elevation: 0,
           height: 110,
           shadowColor: "#000",
@@ -175,87 +180,96 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer
-      theme={{
-        dark: false,
-        colors: {
-          primary: colors.text,
-          background: colors.background,
-          card: colors.navBar,
-          text: colors.text,
-          border: colors.text + "20",
-          notification: colors.text,
-        },
-        fonts: {
-          regular: {
-            fontFamily: "Inter_400Regular",
-            fontWeight: "400",
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer
+        theme={{
+          dark: false,
+          colors: {
+            primary: colors.text,
+            background: colors.background,
+            card: colors.navBar,
+            text: colors.text,
+            border: colors.text + "20",
+            notification: colors.text,
           },
-          medium: {
-            fontFamily: "Inter_500Medium",
-            fontWeight: "500",
-          },
-          bold: {
-            fontFamily: "Inter_700Bold",
-            fontWeight: "700",
-          },
-          heavy: {
-            fontFamily: "Inter_700Bold",
-            fontWeight: "900",
-          },
-        },
-      }}
-    >
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: colors.navBar },
-          headerTintColor: colors.text,
-          headerTitleStyle: {
-            fontFamily: "Inter_600SemiBold",
+          fonts: {
+            regular: {
+              fontFamily: "Inter_400Regular",
+              fontWeight: "400",
+            },
+            medium: {
+              fontFamily: "Inter_500Medium",
+              fontWeight: "500",
+            },
+            bold: {
+              fontFamily: "Inter_700Bold",
+              fontWeight: "700",
+            },
+            heavy: {
+              fontFamily: "Inter_700Bold",
+              fontWeight: "900",
+            },
           },
         }}
-        initialRouteName="Main"
       >
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="SignUp"
-          component={SignUpScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Main"
-          component={MainTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="EditProfile"
-          component={EditProfileScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="BigPost"
-          component={BigPostScreen}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="Caption"
-          component={CaptionScreen}
-          options={{
-            headerShown: false,
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: { backgroundColor: colors.navBar },
+            headerTintColor: colors.text,
+            headerTitleStyle: {
+              fontFamily: "Inter_600SemiBold",
+            },
+            gestureEnabled: false, // Disable swipe-to-go-back gesture
           }}
-        />
-        <Stack.Screen 
-          name="Messages" 
-          component={MessagesScreen} 
-          options={{
-            headerShown: false
-          }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+          initialRouteName="Login"
+        >
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="BigRecipe"
+            component={BigRecipeScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SignUp"
+            component={SignUpScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Main"
+            component={MainTabs}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="BigPost"
+            component={BigPostScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Caption"
+            component={CaptionScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen 
+            name="Messages" 
+            component={MessagesScreen} 
+            options={{
+              headerShown: false
+            }}
+          />
+          <Stack.Screen name="Recipes" component={Recipes} options={{ headerShown: false }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 }

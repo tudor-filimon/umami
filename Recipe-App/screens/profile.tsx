@@ -33,6 +33,7 @@ interface UserInfo {
   age?: string;
   pronouns?: string;
   profileImage?: string;
+  bannerImage?: string; // BANNER CODE ADDED
   followersCount?: number;
   followingCount?: number;
 }
@@ -63,6 +64,7 @@ const ProfileScreen: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editPronouns, setEditPronouns] = useState('');
   const [editProfileImage, setEditProfileImage] = useState<string | null>(null);
+  const [editBannerImage, setEditBannerImage] = useState<string | null>(null); // BANNER CODE ADDED
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -79,6 +81,7 @@ const ProfileScreen: React.FC = () => {
           name: userData.name || '',
           pronouns: userData.pronouns || '',
           profileImage: userData.profileImage || undefined,
+          bannerImage: userData.bannerImage || undefined, // BANNER CODE ADDED
           followersCount: userData.followersCount || 0,
           followingCount: userData.followingCount || 0,
         });
@@ -88,6 +91,7 @@ const ProfileScreen: React.FC = () => {
           name: currentUser.displayName || 'New User',
           pronouns: '',
           profileImage: undefined,
+          bannerImage: undefined, // BANNER CODE ADDED
           followersCount: 0,
           followingCount: 0,
           createdAt: new Date(),
@@ -96,6 +100,7 @@ const ProfileScreen: React.FC = () => {
           name: currentUser.displayName || 'New User',
           pronouns: '',
           profileImage: undefined,
+          bannerImage: undefined, // BANNER CODE ADDED
           followersCount: 0,
           followingCount: 0,
         });
@@ -117,9 +122,9 @@ const ProfileScreen: React.FC = () => {
         );
         const querySnapshot = await getDocs(q);
         const userPosts = querySnapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() } as { id: string; imageUrl: string; createdAt: number }))
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
           .filter((post) => !!post.imageUrl)
-          .sort((a, b) => b.createdAt - a.createdAt);
+          .sort((a, b) => b.createdAt - a.createdAt); // sort by createdAt desc
         setPosts(userPosts);
       } catch (error) {
         console.error('Error fetching user posts:', error);
@@ -138,8 +143,8 @@ const ProfileScreen: React.FC = () => {
       );
       const snapshot = await getDocs(q);
       const userRecipes = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() } as { id: string; name: string }))
-        .filter((recipe) => !!recipe.name);
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((recipe) => !!recipe.name); // or whatever condition is necessary
       setSavedRecipes(userRecipes);
     } catch (error) {
       console.error('Error fetching user recipes:', error);
@@ -172,8 +177,8 @@ const ProfileScreen: React.FC = () => {
     ]);
   };
 
-  // Image picker
-  const pickImage = async () => {
+  // Image picker for profile image
+  const pickProfileImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -192,6 +197,26 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  // Image picker for banner image (BANNER CODE ADDED)
+  const pickBannerImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [16, 9], // or [4, 1], depends on your preferred banner ratio
+        quality: 0.8,
+      });
+      if (!result.canceled) {
+        setUploading(true);
+        const imageUrl = await uploadImage(result.assets[0].uri);
+        setEditBannerImage(imageUrl);
+        setUploading(false);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to pick banner image');
+    }
+  };
+
   // Save profile changes
   const handleSaveProfile = async () => {
     const currentUser = auth.currentUser;
@@ -202,8 +227,11 @@ const ProfileScreen: React.FC = () => {
         name: editName,
         pronouns: editPronouns,
         profileImage: editProfileImage,
+        bannerImage: editBannerImage, // BANNER CODE ADDED
       });
       setShowEditProfile(false);
+      // Refresh local user info
+      fetchUserInfo();
     } catch (error) {
       Alert.alert('Error', 'Failed to save profile');
     } finally {
@@ -216,6 +244,7 @@ const ProfileScreen: React.FC = () => {
     setEditName(userInfo.name);
     setEditPronouns(userInfo.pronouns || '');
     setEditProfileImage(userInfo.profileImage || null);
+    setEditBannerImage(userInfo.bannerImage || null); // BANNER CODE ADDED
     setShowEditProfile(true);
   };
 
@@ -236,8 +265,8 @@ const ProfileScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  // Render each saved recipe – CHANGED to show the recipe name, not the image
-  const renderSaved = ({ item }: { item: DocumentData; index: number }) => (
+  // Render each saved recipe
+  const renderSaved = ({ item, index }: { item: DocumentData; index: number }) => (
     <TouchableOpacity
       onPress={() => navigation.navigate('BigRecipe', { recipe: item })}
       style={{
@@ -258,11 +287,13 @@ const ProfileScreen: React.FC = () => {
   // Main UI
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
-      {/* Banner and Profile Section */}
+      {/* Banner (BANNER CODE ADDED) */}
       <Image
-        source={{ uri: 'https://placehold.co/400x120/png?text=Banner' }}
+        source={{ uri: userInfo.bannerImage || 'https://placehold.co/400x120/png?text=Banner' }}
         style={{ width: '100%', height: 120 }}
       />
+
+      {/* Profile Section */}
       <View style={{ alignItems: 'center', marginTop: -40 }}>
         <Image
           source={{
@@ -391,8 +422,30 @@ const ProfileScreen: React.FC = () => {
             <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
               Edit Profile
             </Text>
+
+            {/* Pick Banner (BANNER CODE ADDED) */}
             <TouchableOpacity
-              onPress={pickImage}
+              onPress={pickBannerImage}
+              disabled={uploading}
+              style={{ alignItems: 'center', marginBottom: 10 }}
+            >
+              {editBannerImage ? (
+                <Image
+                  source={{ uri: editBannerImage }}
+                  style={{ width: '100%', height: 80, borderRadius: 8 }}
+                />
+              ) : (
+                <View
+                  style={{ width: '100%', height: 80, borderRadius: 8, backgroundColor: '#ccc' }}
+                />
+              )}
+              {uploading && <ActivityIndicator style={{ marginTop: 5 }} />}
+              <Text style={{ color: '#007AFF', marginTop: 6 }}>Change Banner</Text>
+            </TouchableOpacity>
+
+            {/* Pick Profile Image */}
+            <TouchableOpacity
+              onPress={pickProfileImage}
               disabled={uploading}
               style={{ alignItems: 'center', marginBottom: 10 }}
             >
@@ -407,7 +460,7 @@ const ProfileScreen: React.FC = () => {
                 />
               )}
               {uploading && <ActivityIndicator style={{ marginTop: 5 }} />}
-              <Text style={{ color: '#007AFF', marginTop: 6 }}>Change Photo</Text>
+              <Text style={{ color: '#007AFF', marginTop: 6 }}>Change Profile Photo</Text>
             </TouchableOpacity>
 
             <TextInput

@@ -106,10 +106,11 @@ const LoginScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#C4A381",
   },
   headerContainer: {
-    backgroundColor: "#000831",
+    // backgroundColor: "#000831",
+    backgroundColor: "#FFEEB7",
     paddingTop: 60,
     paddingBottom: 30,
     borderBottomLeftRadius: 30,
@@ -119,12 +120,12 @@ const styles = StyleSheet.create({
   appName: {
     fontSize: 32,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#000000",
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: "#fff",
+    color: "#000000",
     opacity: 0.8,
   },
   formContainer: {
@@ -158,7 +159,7 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   loginButton: {
-    backgroundColor: "#000831",
+    backgroundColor: "#FFEEB7",
     height: 50,
     borderRadius: 10,
     justifyContent: "center",
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   loginButtonText: {
-    color: "#fff",
+    color: "#000000",
     fontSize: 16,
     fontWeight: "600",
   },
