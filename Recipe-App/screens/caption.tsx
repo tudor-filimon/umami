@@ -23,7 +23,7 @@ type RootStackParamList = {
   SignUp: undefined;
   Main: undefined;
   Caption: {
-    imageUri: string;
+    imageUris: string[];
     userName: string;
   };
 };
@@ -46,7 +46,20 @@ export default function CaptionScreen({
   const [caption, setCaption] = useState("");
   const [isPosting, setIsPosting] = useState(false);
   const [showCaptionOverlay, setShowCaptionOverlay] = useState(false);
-  const { imageUri } = route.params;
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const { imageUris = [] } = route.params;
+
+  const handleNextImage = () => {
+    if (currentImageIndex < imageUris.length - 1) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (currentImageIndex > 0) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
 
   const handleShare = async () => {
     if (isPosting) return;
@@ -59,7 +72,7 @@ export default function CaptionScreen({
         return;
       }
 
-      await postService.createPost(imageUri, caption, []);
+      await postService.createPost(imageUris, caption, []);
 
       Alert.alert("Success", "Your post has been shared!", [
         {
@@ -115,11 +128,40 @@ export default function CaptionScreen({
       >
         {/* Image Preview */}
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: imageUri }}
-            style={styles.image}
-            resizeMode="cover"
-          />
+          {imageUris.length > 0 && (
+            <>
+              <Image
+                source={{ uri: imageUris[currentImageIndex] }}
+                style={styles.image}
+                resizeMode="cover"
+              />
+              {imageUris.length > 1 && (
+                <>
+                  {currentImageIndex > 0 && (
+                    <TouchableOpacity
+                      style={[styles.navButton, styles.prevButton]}
+                      onPress={handlePrevImage}
+                    >
+                      <Ionicons name="chevron-back" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                  {currentImageIndex < imageUris.length - 1 && (
+                    <TouchableOpacity
+                      style={[styles.navButton, styles.nextButton]}
+                      onPress={handleNextImage}
+                    >
+                      <Ionicons name="chevron-forward" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                  <View style={styles.imageCounter}>
+                    <Text style={styles.imageCounterText}>
+                      {currentImageIndex + 1}/{imageUris.length}
+                    </Text>
+                  </View>
+                </>
+              )}
+            </>
+          )}
         </View>
 
         {/* Caption Preview */}
@@ -234,6 +276,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    position: "relative",
   },
   image: {
     width: "100%",
@@ -309,5 +352,35 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#000",
     textAlignVertical: "top",
+  },
+  navButton: {
+    position: "absolute",
+    top: "50%",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  prevButton: {
+    left: 10,
+  },
+  nextButton: {
+    right: 10,
+  },
+  imageCounter: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
   },
 });
