@@ -190,11 +190,12 @@ const ProfileScreen: React.FC = () => {
     </TouchableOpacity>
   );
 
-  const renderSaved = ({ item, index }: { item: DocumentData; index: number }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('BigPost', { posts: savedRecipes, initialIndex: index })}>
+  const renderSaved = ({ item }: { item: DocumentData; index: number }) => (
+    <TouchableOpacity onPress={() => navigation.navigate('BigRecipe', { recipe: item })}>
       <Image source={{ uri: item.imageUrl }} style={{ width: screenWidth / 3 - 4, height: screenWidth / 3, margin: 1 }} resizeMode="cover" />
     </TouchableOpacity>
   );
+  
 
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>

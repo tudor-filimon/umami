@@ -22,6 +22,7 @@ import CaptionScreen from "./screens/caption";
 import EditProfileScreen from "./screens/editprofile";
 import BigPostScreen from "./screens/bigpost"; // Adjust the path if necessary
 import { colors } from "./styles/globalStyles";
+import BigRecipeScreen from "./screens/bigrecipes"; // Adjust the path if necessary
 
 type RootStackParamList = {
   Login: undefined;
@@ -246,6 +247,9 @@ export default function App() {
             headerShown: false,
           }}
         />
+        <Stack.Screen name="BigRecipe" component={BigRecipeScreen} options={{ headerShown: false,
+}} />
+
       </Stack.Navigator>
     </NavigationContainer>
   );
