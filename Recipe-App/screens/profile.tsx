@@ -59,7 +59,7 @@ const ProfileScreen: React.FC = () => {
       );
       const querySnapshot = await getDocs(postsQuery);
       const userPosts = querySnapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .map(doc => ({ id: doc.id, ...doc.data() } as { id: string; imageUrl: string }))
         .filter(post => !!post.imageUrl);
       setPosts(userPosts);
     }
