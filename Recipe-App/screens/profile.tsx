@@ -23,7 +23,6 @@ import {
   doc,
   getDoc,
   setDoc,
-  onSnapshot,
   updateDoc,
 } from 'firebase/firestore';
 import * as ImagePicker from 'expo-image-picker';
@@ -44,13 +43,19 @@ type RootStackParamList = {
   Main: undefined;
   Caption: { imageUri: string };
   BigPost: { posts: DocumentData[]; initialIndex: number };
+  BigRecipe: { recipe: DocumentData };
 };
 
 const screenWidth = Dimensions.get('window').width;
 
 const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [userInfo, setUserInfo] = useState<UserInfo>({ name: '', pronouns: '', followersCount: 0, followingCount: 0 });
+  const [userInfo, setUserInfo] = useState<UserInfo>({
+    name: '',
+    pronouns: '',
+    followersCount: 0,
+    followingCount: 0,
+  });
   const [posts, setPosts] = useState<DocumentData[]>([]);
   const [savedRecipes, setSavedRecipes] = useState<DocumentData[]>([]);
   const [selectedTab, setSelectedTab] = useState<'posts' | 'saved'>('posts');
@@ -61,6 +66,7 @@ const ProfileScreen: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  // Fetch user info
   const fetchUserInfo = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -77,6 +83,7 @@ const ProfileScreen: React.FC = () => {
           followingCount: userData.followingCount || 0,
         });
       } else {
+        // If user doc doesn't exist, create it
         await setDoc(userRef, {
           name: currentUser.displayName || 'New User',
           pronouns: '',
@@ -85,7 +92,13 @@ const ProfileScreen: React.FC = () => {
           followingCount: 0,
           createdAt: new Date(),
         });
-        setUserInfo({ name: currentUser.displayName || 'New User', pronouns: '', profileImage: undefined, followersCount: 0, followingCount: 0 });
+        setUserInfo({
+          name: currentUser.displayName || 'New User',
+          pronouns: '',
+          profileImage: undefined,
+          followersCount: 0,
+          followingCount: 0,
+        });
       }
     } catch (error) {
       console.error('Error fetching user info:', error);
@@ -93,23 +106,40 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  // Fetch user's own posts
   const fetchUserPosts = async () => {
     const currentUser = auth.currentUser;
     if (currentUser) {
-      const q = query(collection(firestore, 'posts'), where('userId', '==', currentUser.uid));
-      const querySnapshot = await getDocs(q);
-      const userPosts = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter((post) => !!post.imageUrl);
-      setPosts(userPosts);
+      try {
+        const q = query(
+          collection(firestore, 'posts'),
+          where('userId', '==', currentUser.uid)
+        );
+        const querySnapshot = await getDocs(q);
+        const userPosts = querySnapshot.docs
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .filter((post) => !!post.imageUrl)
+          .sort((a, b) => b.createdAt - a.createdAt); // sort by createdAt desc
+        setPosts(userPosts);
+      } catch (error) {
+        console.error('Error fetching user posts:', error);
+      }
     }
   };
 
+  // Fetch saved recipes
   const fetchSavedRecipes = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
     try {
-      const q = query(collection(firestore, 'recipes'), where('uid', '==', currentUser.uid));
+      const q = query(
+        collection(firestore, 'recipes'),
+        where('uid', '==', currentUser.uid)
+      );
       const snapshot = await getDocs(q);
-      const userRecipes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })).filter((recipe) => !!recipe.imageUrl);
+      const userRecipes = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .filter((recipe) => !!recipe.name); // or whatever condition is necessary
       setSavedRecipes(userRecipes);
     } catch (error) {
       console.error('Error fetching user recipes:', error);
@@ -124,22 +154,25 @@ const ProfileScreen: React.FC = () => {
     }, [])
   );
 
+  // Logout handler
   const handleLogout = async () => {
     Alert.alert('Confirm Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Logout', onPress: async () => {
+        text: 'Logout',
+        onPress: async () => {
           try {
             await auth.signOut();
             navigation.navigate('Login');
           } catch (error) {
             Alert.alert('Error', 'Logout failed.');
           }
-        }
+        },
       },
     ]);
   };
 
+  // Image picker
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -159,6 +192,7 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  // Save profile changes
   const handleSaveProfile = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) return;
@@ -177,6 +211,7 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
+  // Open edit profile modal pre-populated with existing data
   const openEditProfile = () => {
     setEditName(userInfo.name);
     setEditPronouns(userInfo.pronouns || '');
@@ -184,52 +219,129 @@ const ProfileScreen: React.FC = () => {
     setShowEditProfile(true);
   };
 
+  // Render each post in user's profile
   const renderPost = ({ item, index }: { item: DocumentData; index: number }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('BigPost', { posts, initialIndex: index })}>
-      <Image source={{ uri: item.imageUrl }} style={{ width: screenWidth / 3 - 4, height: screenWidth / 3, margin: 1 }} resizeMode="cover" />
+    <TouchableOpacity
+      onPress={() => navigation.navigate('BigPost', { posts, initialIndex: index })}
+    >
+      <Image
+        source={{ uri: item.imageUrl }}
+        style={{
+          width: screenWidth / 3 - 4,
+          height: screenWidth / 3,
+          margin: 1,
+        }}
+        resizeMode="cover"
+      />
     </TouchableOpacity>
   );
 
+  // Render each saved recipe – CHANGED to show the recipe name, not the image
   const renderSaved = ({ item }: { item: DocumentData; index: number }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('BigRecipe', { recipe: item })}>
-      <Image source={{ uri: item.imageUrl }} style={{ width: screenWidth / 3 - 4, height: screenWidth / 3, margin: 1 }} resizeMode="cover" />
+    <TouchableOpacity
+      onPress={() => navigation.navigate('BigRecipe', { recipe: item })}
+      style={{
+        width: screenWidth / 3 - 4,
+        height: screenWidth / 3,
+        margin: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#f0f0f0',
+      }}
+    >
+      <Text style={{ textAlign: 'center', color: '#333', paddingHorizontal: 4 }}>
+        {item.name || 'No Title'}
+      </Text>
     </TouchableOpacity>
   );
-  
 
+  // Main UI
   return (
     <View style={{ flex: 1, backgroundColor: '#fff' }}>
       {/* Banner and Profile Section */}
-      <Image source={{ uri: 'https://placehold.co/400x120/png?text=Banner' }} style={{ width: '100%', height: 120 }} />
+      <Image
+        source={{ uri: 'https://placehold.co/400x120/png?text=Banner' }}
+        style={{ width: '100%', height: 120 }}
+      />
       <View style={{ alignItems: 'center', marginTop: -40 }}>
-        <Image source={{ uri: userInfo.profileImage || 'https://placehold.co/100x100?text=User' }} style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: '#fff' }} />
-        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#111', marginTop: 8 }}>{userInfo.name}</Text>
-        {userInfo.pronouns ? <Text style={{ fontSize: 14, color: '#555' }}>({userInfo.pronouns})</Text> : null}
+        <Image
+          source={{
+            uri: userInfo.profileImage || 'https://placehold.co/100x100?text=User',
+          }}
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            borderWidth: 2,
+            borderColor: '#fff',
+          }}
+        />
+        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#111', marginTop: 8 }}>
+          {userInfo.name}
+        </Text>
+        {userInfo.pronouns ? (
+          <Text style={{ fontSize: 14, color: '#555' }}>({userInfo.pronouns})</Text>
+        ) : null}
+
         <View style={{ flexDirection: 'row', marginTop: 6 }}>
-          <Text style={{ fontSize: 14, color: '#666', marginHorizontal: 10 }}>{userInfo.followersCount} followers</Text>
-          <Text style={{ fontSize: 14, color: '#666', marginHorizontal: 10 }}>{userInfo.followingCount} following</Text>
+          <Text style={{ fontSize: 14, color: '#666', marginHorizontal: 10 }}>
+            {userInfo.followersCount} followers
+          </Text>
+          <Text style={{ fontSize: 14, color: '#666', marginHorizontal: 10 }}>
+            {userInfo.followingCount} following
+          </Text>
         </View>
+
         <View style={{ flexDirection: 'row', marginTop: 10, gap: 10 }}>
-          <TouchableOpacity onPress={openEditProfile} style={{ backgroundColor: '#f0f0f0', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 10 }}>
+          <TouchableOpacity
+            onPress={openEditProfile}
+            style={{
+              backgroundColor: '#f0f0f0',
+              paddingHorizontal: 20,
+              paddingVertical: 8,
+              borderRadius: 10,
+            }}
+          >
             <Text style={{ fontSize: 14, color: '#111' }}>Edit Profile</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleLogout} style={{ backgroundColor: '#f0f0f0', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 10 }}>
+          <TouchableOpacity
+            onPress={handleLogout}
+            style={{
+              backgroundColor: '#f0f0f0',
+              paddingHorizontal: 20,
+              paddingVertical: 8,
+              borderRadius: 10,
+            }}
+          >
             <Text style={{ fontSize: 14, color: '#111' }}>Log Out</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Tabs */}
-      <View style={{ flexDirection: 'row', justifyContent: 'space-around', borderBottomWidth: 1, borderColor: '#ddd', paddingVertical: 10, marginTop: 20 }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-around',
+          borderBottomWidth: 1,
+          borderColor: '#ddd',
+          paddingVertical: 10,
+          marginTop: 20,
+        }}
+      >
         <TouchableOpacity onPress={() => setSelectedTab('posts')}>
-          <Text style={{ fontWeight: selectedTab === 'posts' ? 'bold' : 'normal' }}>POSTS</Text>
+          <Text style={{ fontWeight: selectedTab === 'posts' ? 'bold' : 'normal' }}>
+            POSTS
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setSelectedTab('saved')}>
-          <Text style={{ fontWeight: selectedTab === 'saved' ? 'bold' : 'normal' }}>SAVED</Text>
+          <Text style={{ fontWeight: selectedTab === 'saved' ? 'bold' : 'normal' }}>
+            SAVED
+          </Text>
         </TouchableOpacity>
       </View>
 
-      {/* Content Grid */}
+      {/* Content */}
       {selectedTab === 'posts' ? (
         posts.length > 0 ? (
           <FlatList
@@ -240,42 +352,104 @@ const ProfileScreen: React.FC = () => {
             contentContainerStyle={{ paddingBottom: 100 }}
           />
         ) : (
-          <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No posts yet</Text>
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
+            No posts yet
+          </Text>
         )
+      ) : savedRecipes.length > 0 ? (
+        <FlatList
+          data={savedRecipes}
+          keyExtractor={(_, index) => index.toString()}
+          renderItem={({ item, index }) => renderSaved({ item, index })}
+          numColumns={3}
+          contentContainerStyle={{ paddingBottom: 100 }}
+        />
       ) : (
-        savedRecipes.length > 0 ? (
-          <FlatList
-            data={savedRecipes}
-            keyExtractor={(_, index) => index.toString()}
-            renderItem={({ item, index }) => renderSaved({ item, index })}
-            numColumns={3}
-            contentContainerStyle={{ paddingBottom: 100 }}
-          />
-        ) : (
-          <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>No saved recipes yet</Text>
-        )
+        <Text style={{ textAlign: 'center', marginTop: 20, color: '#888' }}>
+          No saved recipes yet
+        </Text>
       )}
 
       {/* Edit Profile Modal */}
       <Modal visible={showEditProfile} animationType="slide" transparent>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 20, width: '85%', padding: 20 }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>Edit Profile</Text>
-            <TouchableOpacity onPress={pickImage} disabled={uploading} style={{ alignItems: 'center', marginBottom: 10 }}>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: 20,
+              width: '85%',
+              padding: 20,
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 10 }}>
+              Edit Profile
+            </Text>
+            <TouchableOpacity
+              onPress={pickImage}
+              disabled={uploading}
+              style={{ alignItems: 'center', marginBottom: 10 }}
+            >
               {editProfileImage ? (
-                <Image source={{ uri: editProfileImage }} style={{ width: 80, height: 80, borderRadius: 40 }} />
+                <Image
+                  source={{ uri: editProfileImage }}
+                  style={{ width: 80, height: 80, borderRadius: 40 }}
+                />
               ) : (
-                <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#ccc' }} />
+                <View
+                  style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: '#ccc' }}
+                />
               )}
               {uploading && <ActivityIndicator style={{ marginTop: 5 }} />}
               <Text style={{ color: '#007AFF', marginTop: 6 }}>Change Photo</Text>
             </TouchableOpacity>
-            <TextInput value={editName} onChangeText={setEditName} placeholder="Name" style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10, marginBottom: 10 }} />
-            <TextInput value={editPronouns} onChangeText={setEditPronouns} placeholder="Pronouns (e.g. she/her)" style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10 }} />
-            <TouchableOpacity onPress={handleSaveProfile} disabled={loading} style={{ backgroundColor: '#007AFF', padding: 14, borderRadius: 10, marginTop: 20, alignItems: 'center' }}>
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save Changes</Text>}
+
+            <TextInput
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Name"
+              style={{
+                borderWidth: 1,
+                borderColor: '#ccc',
+                borderRadius: 10,
+                padding: 10,
+                marginBottom: 10,
+              }}
+            />
+            <TextInput
+              value={editPronouns}
+              onChangeText={setEditPronouns}
+              placeholder="Pronouns (e.g. she/her)"
+              style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 10, padding: 10 }}
+            />
+
+            <TouchableOpacity
+              onPress={handleSaveProfile}
+              disabled={loading}
+              style={{
+                backgroundColor: '#007AFF',
+                padding: 14,
+                borderRadius: 10,
+                marginTop: 20,
+                alignItems: 'center',
+              }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Save Changes</Text>
+              )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowEditProfile(false)} style={{ marginTop: 10, alignItems: 'center' }}>
+            <TouchableOpacity
+              onPress={() => setShowEditProfile(false)}
+              style={{ marginTop: 10, alignItems: 'center' }}
+            >
               <Text style={{ color: '#007AFF' }}>Cancel</Text>
             </TouchableOpacity>
           </View>
