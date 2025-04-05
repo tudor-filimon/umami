@@ -42,8 +42,9 @@ type Post = {
   id: string;
   userId: string;
   userName: string;
+  userProfileImage?: string;
   imageUrl: string;
-  imageUrls?: string[]; // Optional array of image URLs
+  imageUrls?: string[];
   caption: string;
   hashtags: string[];
   createdAt: any;
@@ -56,6 +57,7 @@ type UserData = {
   id: string;
   name: string;
   profileImage?: string;
+  [key: string]: any;
 };
 
 const InstagramPost = ({ post }: { post: Post }) => {
@@ -377,7 +379,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
         <View style={styles.userInfo}>
           <View style={styles.profilePicContainer}>
             <Image
-              source={{ uri: "https://via.placeholder.com/32" }}
+              source={{ uri: post.userProfileImage || 'https://via.placeholder.com/32' }}
               style={styles.profilePic}
             />
           </View>
@@ -562,11 +564,19 @@ const HomeScreen = () => {
       const q = query(postsRef, orderBy("createdAt", "desc"));
 
       const snapshot = await getDocs(q);
-      const postsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        userId: doc.data().userId || auth.currentUser?.uid // Ensure userId is set
-      })) as Post[];
+      const postsData = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
+        const postData = docSnapshot.data();
+        // Fetch user profile image
+        const userDoc = await getDoc(doc(firestore, "users", postData.userId));
+        const userData = userDoc.data() as UserData;
+        
+        return {
+          id: docSnapshot.id,
+          ...postData,
+          userId: postData.userId || auth.currentUser?.uid,
+          userProfileImage: userData?.profileImage
+        } as Post;
+      }));
       setPosts(postsData);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -635,29 +645,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignSelf: "center",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    paddingTop: Platform.OS === 'ios' ? 50 : 30,
-    backgroundColor: '#000831',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  chatButton: {
-    padding: 8,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 14,
   },
   userInfo: {
     flexDirection: "row",
@@ -669,6 +666,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginRight: 10,
     backgroundColor: "#f0f0f0",
+    overflow: 'hidden',
   },
   profilePic: {
     width: "100%",
@@ -676,13 +674,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   username: {
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "600",
     fontSize: 14,
     color: "#262626",
   },
   imageContainer: {
-    width: "100%",
     position: "relative",
+    width: "100%",
   },
   postImage: {
     width: "100%",
@@ -692,15 +690,14 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 12,
-    paddingHorizontal: 14,
+    padding: 14,
   },
   leftActions: {
     flexDirection: "row",
     alignItems: "center",
   },
   actionButton: {
-    padding: 4,
+    marginRight: 16,
   },
   actionIcon: {
     marginLeft: 16,
@@ -710,7 +707,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   likes: {
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "600",
     fontSize: 14,
     color: "#262626",
   },
@@ -732,7 +729,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   hashtag: {
-    fontFamily: "Inter_500Medium",
     color: "#003569",
     marginRight: 4,
   },
@@ -749,10 +745,8 @@ const styles = StyleSheet.create({
   },
   commentItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: 8,
   },
   commentContent: {
     flex: 1,
@@ -771,16 +765,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   commentUsername: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
+    fontWeight: "600",
     marginRight: 8,
-    color: "#262626",
+    fontSize: 14,
   },
   commentText: {
-    fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "#262626",
-    flex: 1,
+    flexShrink: 1,
   },
   addCommentSection: {
     flexDirection: "row",
@@ -788,11 +779,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5,
     borderTopColor: "#dbdbdb",
     alignItems: "center",
-    backgroundColor: "#ffffff",
   },
   commentInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
     fontSize: 14,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -802,9 +791,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   postCommentText: {
-    fontFamily: "Inter_600SemiBold",
     color: "#0095f6",
     fontSize: 14,
+    fontWeight: "600",
   },
   deleteButton: {
     padding: 8,
@@ -825,7 +814,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   seeMoreText: {
-    fontFamily: "Inter_500Medium",
     fontSize: 14,
     color: "#8e8e8e",
   },
@@ -964,7 +952,7 @@ const styles = StyleSheet.create({
   imageCounterText: {
     color: "#fff",
     fontSize: 12,
-    fontFamily: "Inter_500Medium",
+    fontWeight: "600",
   },
   shareModal: {
     width: "90%",
@@ -1020,6 +1008,14 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 14,
     color: "#262626",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  chatButton: {
+    padding: 8,
   },
 });
 
