@@ -35,7 +35,13 @@ const SignUpScreen = () => {
   const navigation = useNavigation<SignUpScreenNavigationProp>();
 
   const handleSignUp = async () => {
+    if (!email || !password || !confirmPassword) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
     if (password !== confirmPassword) {
+      Alert.alert("Error", "Passwords do not match");
       Alert.alert("Error", "Passwords do not match");
       return;
     }

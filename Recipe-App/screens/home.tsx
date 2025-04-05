@@ -10,6 +10,7 @@ import {
   TextInput,
   Keyboard,
   Alert,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -24,8 +25,11 @@ import {
   Timestamp,
   getDoc,
   deleteDoc,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { firestore, auth } from "../firebaseConfig";
+import { useNavigation } from "@react-navigation/native";
 
 type Comment = {
   id: string;
@@ -36,14 +40,24 @@ type Comment = {
 
 type Post = {
   id: string;
+  userId: string;
   userName: string;
+  userProfileImage?: string;
   imageUrl: string;
+  imageUrls?: string[];
   caption: string;
   hashtags: string[];
   createdAt: any;
   likes: number;
   likedBy: string[];
   comments: Comment[];
+};
+
+type UserData = {
+  id: string;
+  name: string;
+  profileImage?: string;
+  [key: string]: any;
 };
 
 const InstagramPost = ({ post }: { post: Post }) => {
@@ -57,6 +71,11 @@ const InstagramPost = ({ post }: { post: Post }) => {
   const [comments, setComments] = useState<Comment[]>(post.comments || []);
   const [userName, setUserName] = useState<string>("");
   const [showDeleteOverlay, setShowDeleteOverlay] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showShareOverlay, setShowShareOverlay] = useState(false);
+  const [users, setUsers] = useState<UserData[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigation = useNavigation();
 
   useEffect(() => {
     fetchUserName();
@@ -166,6 +185,26 @@ const InstagramPost = ({ post }: { post: Post }) => {
   const displayedComments = showAllComments ? comments : comments.slice(0, 10);
   const hasMoreComments = comments.length > 10;
 
+  const handleNextImage = () => {
+    if (
+      post.imageUrls &&
+      Array.isArray(post.imageUrls) &&
+      currentImageIndex < post.imageUrls.length - 1
+    ) {
+      setCurrentImageIndex(currentImageIndex + 1);
+    }
+  };
+
+  const handlePrevImage = () => {
+    if (
+      post.imageUrls &&
+      Array.isArray(post.imageUrls) &&
+      currentImageIndex > 0
+    ) {
+      setCurrentImageIndex(currentImageIndex - 1);
+    }
+  };
+
   const LikesOverlay = () => (
     <View style={styles.overlay}>
       <View style={styles.likesModal}>
@@ -190,7 +229,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
                 <Text style={styles.likeUsername}>{username}</Text>
               </View>
             ))}
-          {(!post.likedBy || post.likedBy.length === 0) && (
+          {(post.likedBy.length === 0) && (
             <View style={styles.emptyLikes}>
               <Text style={styles.emptyLikesText}>No likes yet</Text>
             </View>
@@ -238,17 +277,109 @@ const InstagramPost = ({ post }: { post: Post }) => {
     </View>
   );
 
+  // Add this function to fetch users
+  const fetchUsers = async () => {
+    try {
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef);
+      const querySnapshot = await getDocs(q);
+      const usersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as UserData[];
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  // Add this function to handle sharing
+  const handleShare = async (post: Post, receiverId: string) => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      // Create a message with the post details
+      const messageData = {
+        text: `Shared a post: ${post.caption}`,
+        senderId: currentUser.uid,
+        receiverId: receiverId,
+        timestamp: serverTimestamp(),
+        participants: [currentUser.uid, receiverId],
+        read: false,
+        postId: post.id, // Store the post ID
+        postImage: post.imageUrl, // Store the post image URL
+        postCaption: post.caption, // Store the post caption
+        type: 'post' // Indicate this is a post share
+      };
+
+      // Add the message to the messages collection
+      await addDoc(collection(firestore, 'messages'), messageData);
+
+      // Close the share overlay
+      setShowShareOverlay(false);
+      Alert.alert('Success', 'Post shared successfully!');
+    } catch (error) {
+      console.error('Error sharing post:', error);
+      Alert.alert('Error', 'Failed to share post');
+    }
+  };
+
+  // Add this component for the share overlay
+  const ShareOverlay = () => (
+    <View style={styles.overlay}>
+      <View style={styles.shareModal}>
+        <View style={styles.shareHeader}>
+          <Text style={styles.shareTitle}>Share with</Text>
+          <TouchableOpacity onPress={() => setShowShareOverlay(false)} style={styles.closeButton}>
+            <Ionicons name="close" size={24} color="black" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search users..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+        <ScrollView style={styles.usersList}>
+          {users
+            .filter(user => 
+              user.id !== auth.currentUser?.uid &&
+              user.name.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            .map(user => (
+              <TouchableOpacity
+                key={user.id}
+                style={styles.userItem}
+                onPress={() => handleShare(post, user.id)}
+              >
+                <Image
+                  source={{ uri: user.profileImage || 'https://via.placeholder.com/40' }}
+                  style={styles.userImage}
+                />
+                <Text style={styles.userName}>{user.name}</Text>
+              </TouchableOpacity>
+            ))}
+        </ScrollView>
+      </View>
+    </View>
+  );
+
   return (
     <View style={styles.card}>
       {showLikesOverlay && <LikesOverlay />}
       {showDeleteOverlay && <DeleteOverlay />}
+      {showShareOverlay && <ShareOverlay />}
 
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.userInfo}>
           <View style={styles.profilePicContainer}>
             <Image
-              source={{ uri: "https://via.placeholder.com/32" }}
+              source={{ uri: post.userProfileImage || 'https://via.placeholder.com/32' }}
               style={styles.profilePic}
             />
           </View>
@@ -262,7 +393,46 @@ const InstagramPost = ({ post }: { post: Post }) => {
       </View>
 
       {/* Image */}
-      <Image source={{ uri: post.imageUrl }} style={styles.postImage} />
+      <View style={styles.imageContainer}>
+        <Image
+          source={{
+            uri:
+              post.imageUrls &&
+              Array.isArray(post.imageUrls) &&
+              post.imageUrls.length > 0
+                ? post.imageUrls[currentImageIndex]
+                : post.imageUrl,
+          }}
+          style={styles.postImage}
+        />
+        {post.imageUrls &&
+          Array.isArray(post.imageUrls) &&
+          post.imageUrls.length > 1 && (
+            <>
+              {currentImageIndex > 0 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.prevButton]}
+                  onPress={handlePrevImage}
+                >
+                  <Ionicons name="chevron-back" size={24} color="#fff" />
+                </TouchableOpacity>
+              )}
+              {currentImageIndex < post.imageUrls.length - 1 && (
+                <TouchableOpacity
+                  style={[styles.navButton, styles.navButtonNext]}
+                  onPress={handleNextImage}
+                >
+                  <Ionicons name="chevron-forward" size={24} color="#fff" />
+                </TouchableOpacity>
+              )}
+              <View style={styles.imageCounter}>
+                <Text style={styles.imageCounterText}>
+                  {currentImageIndex + 1}/{post.imageUrls.length}
+                </Text>
+              </View>
+            </>
+          )}
+      </View>
 
       {/* Actions */}
       <View style={styles.actions}>
@@ -283,6 +453,15 @@ const InstagramPost = ({ post }: { post: Post }) => {
               size={22}
               color="#262626"
             />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionIcon]}
+            onPress={() => {
+              fetchUsers();
+              setShowShareOverlay(true);
+            }}
+          >
+            <Ionicons name="paper-plane-outline" size={22} color="#262626" />
           </TouchableOpacity>
         </View>
         <TouchableOpacity
@@ -375,6 +554,7 @@ const InstagramPost = ({ post }: { post: Post }) => {
 };
 
 const HomeScreen = () => {
+  const navigation = useNavigation();
   const [posts, setPosts] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -384,10 +564,19 @@ const HomeScreen = () => {
       const q = query(postsRef, orderBy("createdAt", "desc"));
 
       const snapshot = await getDocs(q);
-      const postsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Post[];
+      const postsData = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
+        const postData = docSnapshot.data();
+        // Fetch user profile image
+        const userDoc = await getDoc(doc(firestore, "users", postData.userId));
+        const userData = userDoc.data() as UserData;
+        
+        return {
+          id: docSnapshot.id,
+          ...postData,
+          userId: postData.userId || auth.currentUser?.uid,
+          userProfileImage: userData?.profileImage
+        } as Post;
+      }));
       setPosts(postsData);
     } catch (error) {
       console.error("Error fetching posts:", error);
@@ -403,6 +592,7 @@ const HomeScreen = () => {
       const postsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
+        userId: doc.data().userId || auth.currentUser?.uid // Ensure userId is set
       })) as Post[];
       setPosts(postsData);
     });
@@ -418,6 +608,15 @@ const HomeScreen = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#000831" }}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Home</Text>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Messages')}
+          style={styles.chatButton}
+        >
+          <Ionicons name="chatbubble-outline" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
       <ScrollView
         contentContainerStyle={styles.scrollViewContent}
         showsVerticalScrollIndicator={true}
@@ -446,10 +645,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignSelf: "center",
     shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
@@ -470,6 +666,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginRight: 10,
     backgroundColor: "#f0f0f0",
+    overflow: 'hidden',
   },
   profilePic: {
     width: "100%",
@@ -477,9 +674,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   username: {
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "600",
     fontSize: 14,
     color: "#262626",
+  },
+  imageContainer: {
+    position: "relative",
+    width: "100%",
   },
   postImage: {
     width: "100%",
@@ -489,15 +690,14 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: 12,
-    paddingHorizontal: 14,
+    padding: 14,
   },
   leftActions: {
     flexDirection: "row",
     alignItems: "center",
   },
   actionButton: {
-    padding: 4,
+    marginRight: 16,
   },
   actionIcon: {
     marginLeft: 16,
@@ -507,7 +707,7 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   likes: {
-    fontFamily: "Inter_600SemiBold",
+    fontWeight: "600",
     fontSize: 14,
     color: "#262626",
   },
@@ -529,7 +729,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   hashtag: {
-    fontFamily: "Inter_500Medium",
     color: "#003569",
     marginRight: 4,
   },
@@ -546,10 +745,8 @@ const styles = StyleSheet.create({
   },
   commentItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: 8,
   },
   commentContent: {
     flex: 1,
@@ -568,16 +765,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   commentUsername: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
+    fontWeight: "600",
     marginRight: 8,
-    color: "#262626",
+    fontSize: 14,
   },
   commentText: {
-    fontFamily: "Inter_400Regular",
     fontSize: 14,
-    color: "#262626",
-    flex: 1,
+    flexShrink: 1,
   },
   addCommentSection: {
     flexDirection: "row",
@@ -589,7 +783,6 @@ const styles = StyleSheet.create({
   },
   commentInput: {
     flex: 1,
-    fontFamily: "Inter_400Regular",
     fontSize: 14,
     paddingVertical: 8,
     paddingHorizontal: 12,
@@ -599,9 +792,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   postCommentText: {
-    fontFamily: "Inter_600SemiBold",
     color: "#0095f6",
     fontSize: 14,
+    fontWeight: "600",
   },
   deleteButton: {
     padding: 8,
@@ -622,7 +815,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   seeMoreText: {
-    fontFamily: "Inter_500Medium",
     fontSize: 14,
     color: "#8e8e8e",
   },
@@ -732,6 +924,99 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: "#ffffff",
     fontSize: 14,
+  },
+  navButton: {
+    position: "absolute",
+    top: "50%",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  prevButton: {
+    left: 10,
+  },
+  navButtonNext: {
+    right: 10,
+  },
+  imageCounter: {
+    position: "absolute",
+    bottom: 10,
+    left: 10,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  imageCounterText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  shareModal: {
+    width: "90%",
+    maxHeight: "70%",
+    backgroundColor: "#ffffff",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  shareHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#dbdbdb",
+  },
+  shareTitle: {
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+    color: "#262626",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#dbdbdb",
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  usersList: {
+    maxHeight: 400,
+  },
+  userItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#dbdbdb",
+  },
+  userImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 12,
+  },
+  userName: {
+    fontFamily: "Inter_500Medium",
+    fontSize: 14,
+    color: "#262626",
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  chatButton: {
+    padding: 8,
   },
 });
 
