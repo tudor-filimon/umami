@@ -13,6 +13,20 @@ import CaptionScreen from './screens/caption';
 import EditProfileScreen from './screens/editprofile';
 import BigPostScreen from './screens/bigpost'; // Adjust the path if necessary
 import { colors } from './styles/globalStyles';
+import * as SplashScreen from 'expo-splash-screen';
+import { Ionicons } from '@expo/vector-icons';
+import 'react-native-reanimated';
+
+
+import Recipes from './screens/recipes'
+
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from "@expo-google-fonts/inter";
 
 
 type RootStackParamList = {
@@ -20,6 +34,7 @@ type RootStackParamList = {
   SignUp: undefined;
   Main: undefined;
   Caption: { imageUri: string; userName: string };
+  Recipes: { recipeData: object[] }
 };
 
 const Tab = createBottomTabNavigator();
@@ -209,6 +224,7 @@ export default function App() {
         <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
         <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false }} />
         <Stack.Screen name="BigPost" component={BigPostScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Recipes" component={Recipes} options={{ headerShown: false }} />
         <Stack.Screen 
           name="Caption" 
           component={CaptionScreen} 
@@ -216,6 +232,7 @@ export default function App() {
             headerShown: false,
           }}
         />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -3,9 +3,21 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
 import { BACKEND_URL } from '../constant';
+import { useNavigation } from '@react-navigation/native'
+import { StackNavigationProp } from '@react-navigation/stack';
 
+// Define your navigation parameter list
+type RootStackParamList = {
+  Home: undefined;
+  Recipes: { recipeData: object[] };
+  // Add other screens here as needed
+};
+
+type NavigationProps = StackNavigationProp<RootStackParamList>;
 
 const HomeScreen = () => {
+  const navigation = useNavigation<NavigationProps>();
+
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const [hasGalleryPermission, setHasGalleryPermission] = useState(null);
 
@@ -66,37 +78,43 @@ const HomeScreen = () => {
     const image = result.assets[0];
     const uri = image.uri;
     const fileName = uri.split('/').pop();
-
     const match = /\.(\w+)$/.exec(fileName || '');
     const type = match ? `image/${match[1]}` : `image`;
-
-    // FormData to send file
+  
+    // Create FormData and append the file
     const formData = new FormData();
     formData.append('image', {
       uri,
       name: fileName,
       type,
     } as any);
-
+  
     try {
       console.log('Uploading image...');
-      const response = await fetch(BACKEND_URL + "/api/chatgpt/get-recipes/" , {
+      const response = await fetch(BACKEND_URL + "/api/chatgpt/get-recipes", {
         method: 'POST',
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
         body: formData,
+        // Remove Content-Type header - let React Native set it automatically
+        // with the proper multipart/form-data boundary
       });
-
-      console.log(response)
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Server error: ${errorText}`);
+      }
+  
       const data = await response.json();
+      Alert.alert('Upload Successful', 'Recipes generated!');
+      
+      // Navigate to the recipes screen with the generated data
+      navigation.navigate('Recipes', { recipeData: data });
+      console.log(data);
 
-      Alert.alert('Upload Successful', `Response: ${JSON.stringify(data)}`);
-      console.log(data); // Or update your UI with this data
-
+      return data;
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Upload Failed', 'Something went wrong!');
+      // Alert.alert('Upload Failed', error.message || 'Something went wrong!');
+      throw error;
     }
   }
 
