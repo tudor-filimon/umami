@@ -22,7 +22,7 @@ Umami is a full-stack mobile application that combines AI-powered recipe generat
 ### 🎨 Visual Experience
 
 - **Recipe Images**: Automatically fetch beautiful food photography from Unsplash
-- **Intuitive UI**: Clean, modern interface built with React Native and NativeWind
+- **Intuitive UI**: Clean, modern interface built with React Native and NativeWind (check out the swiping feature in the demo day presentation!)
 - **Cross-Platform**: Runs on iOS, Android, and web via Expo
 
 ## 🛠️ Technology Stack
