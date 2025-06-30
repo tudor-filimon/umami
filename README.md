@@ -25,6 +25,17 @@ Umami is a full-stack mobile application that combines AI-powered recipe generat
 - **Intuitive UI**: Clean, modern interface built with React Native and NativeWind (check out the swiping feature in the demo day presentation!)
 - **Cross-Platform**: Runs on iOS, Android, and web via Expo
 
+## Challenges Encountered
+
+- **Image Compression**: with generation times over 3 minutes long, we realized our images were being processed at to high of a quality
+  - To solve this, we added an intermediary processing stage to compress the image, speeding up the process exponentially
+- **LLM Inaccuracy**: with creative recipes of plastic salad and laptop toast, our OpenAI responses were highly inconsistent for our goals.
+  - To solve this, we refined our prompt by providing more specific instructions, examples, and iterative refinement
+  
+## Accomplishments We Are Proud Of
+
+Being able to successfully use Firebase Authentication for user management. Learning to use REST APIs in a Flask-based environment for sending requests between the frontend and backend, getting used to third-party services such as OpenAI, and creating an aesthetically pleasing and cohesive application that works as intended. We are also especially proud of our functional Tinder-like swiping feature in our recipe generation to save or discard posts! Lastly, incorporating a rudimentary messaging system with Firebase was also a major accomplishment for us.
+
 ## 🛠️ Technology Stack
 
 ### Frontend (React Native + Expo)
@@ -49,13 +60,6 @@ Umami is a full-stack mobile application that combines AI-powered recipe generat
 - **Firebase Authentication** for secure user management
 - **Firebase Storage** for image uploads
 - **Unsplash API** for recipe photography
-
-## Challenges Encountered
-
-- **Image Compression**: with generation times over 3 minutes long, we realized our images were being processed at to high of a quality
-  - To solve this, we added an intermediary processing stage to compress the image, speeding up the process exponentially
-- **LLM Inaccuracy**: with creative recipes of plastic salad and laptop toast, our OpenAI responses were highly inconsistent for our goals.
-  - To solve this, we refined our prompt by providing more specific instructions, examples, and iterative refinement
 
 ## 🚀 Getting Started
 
