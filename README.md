@@ -176,27 +176,6 @@ Being able to successfully use Firebase Authentication for user management. Lear
 - **Messages**: Real-time chat with other users
 - **Video Call**: Integrated video rooms for cooking sessions (in progress...)
 
-## 🔧 API Endpoints
-
-### Recipe Management
-
-- `POST /api/recipes` - Add new recipe to database
-- `GET /api/recipes/user/{user_id}` - Get user's recipes
-
-### AI Recipe Generation
-
-- `POST /api/chatgpt/get-recipes` - Generate recipes from image
-
-### Image Processing
-
-- `POST /api/vision/analyze-image` - Analyze image for ingredients
-- `GET /api/image-gen?query={query}` - Get recipe images from Unsplash
-
-### Video Calling
-
-- `POST /api/video-room` - Create new video room
-- `DELETE /api/video-room/{room_name}` - Delete video room
-
 ## 🔒 Security & Configuration
 
 ### Environment Variables
