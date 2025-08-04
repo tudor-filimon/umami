@@ -1,7 +1,9 @@
 # 🍳 Umami - AI-Powered Recipe Social Media App
 
-Checkout Our Demo Day [Presentation](https://www.canva.com/design/DAGjyjEuHpU/HMQiT6OSRYnecVMIeu7G0w/edit?utm_content=DAGjyjEuHpU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton 
+## Checkout Our Demo Day [Presentation](https://www.canva.com/design/DAGjyjEuHpU/HMQiT6OSRYnecVMIeu7G0w/edit?utm_content=DAGjyjEuHpU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton 
 )!
+
+
 
 Umami is a full-stack mobile application that combines AI-powered recipe generation with social media features. Users can photograph their available ingredients, generate personalized recipes using artificial intelligence, and share their culinary creations with a community of food enthusiasts.
 
@@ -12,6 +14,7 @@ Umami is a full-stack mobile application that combines AI-powered recipe generat
 - **Smart Ingredient Detection**: Upload photos of your fridge or ingredients using Google Cloud Vision API
 - **Intelligent Recipe Creation**: Generate 3 meal-specific recipes using OpenAI's ChatGPT API
 - **Meal Context Awareness**: Recipes adapt to breakfast, lunch, or dinner preferences
+
 
 ### 📱 Social Media Platform
 
