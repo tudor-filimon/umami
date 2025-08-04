@@ -4,13 +4,14 @@
 [Presentation](https://www.canva.com/design/DAGjyjEuHpU/HMQiT6OSRYnecVMIeu7G0w/edit?utm_content=DAGjyjEuHpU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 ## Demo Video:
-[Google Drive Link(Video Too Large :(](https://drive.google.com/file/d/1YyyqlYR5JODqRQKnurrwfXgTnhh2xt3X/view?usp=drive_link)
+[Google Drive Link Video](https://drive.google.com/file/d/1YyyqlYR5JODqRQKnurrwfXgTnhh2xt3X/view?usp=drive_link)
 
 Umami is a full-stack mobile application that combines AI-powered recipe generation with social media features. Users can photograph their available ingredients, generate personalized recipes using artificial intelligence, and share their culinary creations with a community of food enthusiasts.
 
 ## Pre-Development Design
 
 Check Out Our [**Figma Design**](https://www.figma.com/proto/eJF0fEUourl3Kh99f2GEWw/AI-Recipe-Generator?node-id=102-187&p=f&t=vrux7qaCVb7DkiJ5-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=102%3A187)
+
 Check Out Our [**Figma Prototype**](https://www.figma.com/proto/eJF0fEUourl3Kh99f2GEWw/AI-Recipe-Generator?node-id=152-155&p=f&t=vrux7qaCVb7DkiJ5-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=102%3A187)
 
 ## ✨ Key Features
@@ -27,7 +28,7 @@ Check Out Our [**Figma Prototype**](https://www.figma.com/proto/eJF0fEUourl3Kh99
 
 - **Recipe Sharing**: Post and discover recipes from other users
 - **Real-time Messaging**: Chat with fellow cooking enthusiasts
-- **Video Calling**: Connect face-to-face using integrated Daily.co video rooms
+- **Video Calling**: Connect face-to-face using integrated Daily.co video rooms (in progress...)
 - **User Profiles**: Customizable profiles with recipe collections
 <img width="1669" height="712" alt="Social-Media-Features" src="https://github.com/user-attachments/assets/06c7f5b2-6b33-4e5b-961d-17ed657c6caf" />
 
@@ -81,7 +82,7 @@ Being able to successfully use Firebase Authentication for user management. Lear
 ### Prerequisites
 
 - Node.js and npm
-- Python 3.8+
+- Python 3.10+
 - Expo CLI (`npm install -g @expo/cli`)
 - Firebase project
 - Google Cloud Platform account
