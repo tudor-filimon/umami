@@ -24,20 +24,18 @@ Check Out Our [**Figma Prototype**](https://www.figma.com/proto/eJF0fEUourl3Kh99
 <img width="1500" height="713" alt="Recipe-Generation" src="https://github.com/user-attachments/assets/b52b44d5-24fb-414d-9e4a-cec17b5259de" />
 
 
-### 📱 Social Media Platform
+### 📱 Social Media Platform and 🎨 Visual Experience
 
 - **Recipe Sharing**: Post and discover recipes from other users
 - **Real-time Messaging**: Chat with fellow cooking enthusiasts
 - **Video Calling**: Connect face-to-face using integrated Daily.co video rooms (in progress...)
 - **User Profiles**: Customizable profiles with recipe collections
-<img width="1669" height="712" alt="Social-Media-Features" src="https://github.com/user-attachments/assets/06c7f5b2-6b33-4e5b-961d-17ed657c6caf" />
-
-
-### 🎨 Visual Experience
-
 - **Recipe Images**: Automatically fetch beautiful food photography from Unsplash
 - **Intuitive UI**: Clean, modern interface built with React Native and NativeWind (check out the swiping feature in the demo day presentation!)
 - **Cross-Platform**: Runs on iOS, Android, and web via Expo
+<img width="1669" height="712" alt="Social-Media-Features" src="https://github.com/user-attachments/assets/b3cafa98-74d7-4892-9757-7d7da837a166" />
+
+
 
 ## 🚧 Challenges Encountered
 
