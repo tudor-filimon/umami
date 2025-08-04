@@ -21,8 +21,7 @@ Check Out Our [**Figma Prototype**](https://www.figma.com/proto/eJF0fEUourl3Kh99
 - **Smart Ingredient Detection**: Upload photos of your fridge or ingredients using Google Cloud Vision API
 - **Intelligent Recipe Creation**: Generate 3 meal-specific recipes using OpenAI's ChatGPT API
 - **Meal Context Awareness**: Recipes adapt to breakfast, lunch, or dinner preferences
-<img width="1497" height="675" alt="ai-gen" src="https://github.com/user-attachments/assets/3757d62d-e5f0-4b8d-99ca-a0b2e588e43f" />
-
+<img width="1500" height="713" alt="Recipe-Generation" src="https://github.com/user-attachments/assets/b52b44d5-24fb-414d-9e4a-cec17b5259de" />
 
 
 ### 📱 Social Media Platform
