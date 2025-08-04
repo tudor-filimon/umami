@@ -1,7 +1,7 @@
 # 🍳 Umami - AI-Powered Recipe Social Media App
 
-## Checkout Our Demo Day [Presentation](https://www.canva.com/design/DAGjyjEuHpU/HMQiT6OSRYnecVMIeu7G0w/edit?utm_content=DAGjyjEuHpU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton 
-)!
+## Checkout Our Demo Day:
+[Presentation](https://www.canva.com/design/DAGjyjEuHpU/HMQiT6OSRYnecVMIeu7G0w/edit?utm_content=DAGjyjEuHpU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
 
 
