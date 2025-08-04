@@ -33,7 +33,7 @@ Check Out Our [**Figma Prototype**](https://www.figma.com/proto/eJF0fEUourl3Kh99
 - **Recipe Images**: Automatically fetch beautiful food photography from Unsplash
 - **Intuitive UI**: Clean, modern interface built with React Native and NativeWind (check out the swiping feature in the demo day presentation!)
 - **Cross-Platform**: Runs on iOS, Android, and web via Expo
-<img width="1669" height="712" alt="Social-Media-Features" src="https://github.com/user-attachments/assets/b3cafa98-74d7-4892-9757-7d7da837a166" />
+<img width="2105" height="813" alt="ComponentsAndPages" src="https://github.com/user-attachments/assets/88b9519e-8f0c-46fa-af72-69ce834ceef8" />
 
 
 
