@@ -3,7 +3,8 @@
 ## Checkout Our Demo Day:
 [Presentation](https://www.canva.com/design/DAGjyjEuHpU/HMQiT6OSRYnecVMIeu7G0w/edit?utm_content=DAGjyjEuHpU&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton)
 
-
+## Demo Video:
+[Google Drive Link(Video Too Large :(](https://drive.google.com/file/d/1YyyqlYR5JODqRQKnurrwfXgTnhh2xt3X/view?usp=drive_link)
 
 Umami is a full-stack mobile application that combines AI-powered recipe generation with social media features. Users can photograph their available ingredients, generate personalized recipes using artificial intelligence, and share their culinary creations with a community of food enthusiasts.
 
@@ -28,6 +29,8 @@ Check Out Our [**Figma Prototype**](https://www.figma.com/proto/eJF0fEUourl3Kh99
 - **Real-time Messaging**: Chat with fellow cooking enthusiasts
 - **Video Calling**: Connect face-to-face using integrated Daily.co video rooms
 - **User Profiles**: Customizable profiles with recipe collections
+<img width="1669" height="712" alt="Social-Media-Features" src="https://github.com/user-attachments/assets/06c7f5b2-6b33-4e5b-961d-17ed657c6caf" />
+
 
 ### 🎨 Visual Experience
 
